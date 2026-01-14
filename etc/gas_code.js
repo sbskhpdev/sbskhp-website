@@ -238,7 +238,7 @@ function sendApplicationEmail(info) {
           <strong>과정명:</strong> ${course}<br>
           <strong>반려 사유:</strong> ${reason || '정원 초과 또는 요건 미충족'}
         </div>
-        <p>관련하여 문의사항이 있으시면 고객 센터로 연락 주시기 바랍니다.</p>
+        <p>관련하여 문의사항이 있으시면 haba98@sbs.co.kr로 연락 주시기 바랍니다.</p>
       `;
       break;
     case '취소':
@@ -257,7 +257,7 @@ function sendApplicationEmail(info) {
 
   const footer = `
     <div style="margin-top: 30px; font-size: 0.85rem; color: #6b7280; border-top: 1px solid #e5e7eb; padding-top: 10px;">
-      본 메일은 발신 전용입니다. 문의는 웹사이트의 Contact 메뉴를 이용해 주세요.<br>
+      본 메일은 발신 전용입니다. 문의는 haba98@sbs.co.kr로 연락 주시기 바랍니다.<br>
       © SBS A&T Hightech Platform. All rights reserved.
     </div>
   `;
