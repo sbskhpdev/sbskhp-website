@@ -111,7 +111,19 @@ body {
 /* ===== 모바일 내비게이션 ===== */
 .mobile-nav {
     margin-top: 16px;
-    padding-bottom: 16px;
+    padding-bottom: 24px;
+    max-height: calc(100vh - 80px); /* 헤더 높이를 제외한 나머지 영역 */
+    overflow-y: auto; /* 내용이 많으면 내부 스크롤 발생 */
+    -webkit-overflow-scrolling: touch; /* iOS 부드러운 스크롤 */
+}
+
+.mobile-nav::-webkit-scrollbar {
+    width: 4px;
+}
+
+.mobile-nav::-webkit-scrollbar-thumb {
+    background: var(--gray-300);
+    border-radius: 10px;
 }
 
 .mobile-nav-hidden {
@@ -155,7 +167,19 @@ body {
     background-color: var(--primary-50);
     color: var(--primary-700);
 }
+/* 모달 및 추가 정보 (전략 2 적용) */
+.mobile-nav-extra {
+    margin-top: 1rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--gray-200);
+}
 
+.mobile-notice-section .notice-item {
+    font-size: 0.8rem;
+    color: var(--gray-600);
+    line-height: 1.6;
+    margin-bottom: 0.5rem;
+}
 .mobile-nav-item.active {
     background-color: var(--primary-100);
     color: var(--primary-700);

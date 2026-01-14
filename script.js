@@ -236,6 +236,7 @@ async function handleRouter() {
     // 상세 페이지(모달) 처리
     const currentModal = document.getElementById('education-modal');
     if (params.detail) {
+        // 모달이 없거나 열려있더라도 파라미터가 있으면 호출 (openEducationModal 내부에서 중복 체크 및 제거 수행)
         if (!currentModal) {
             openEducationModal(params.detail);
         }
@@ -263,7 +264,7 @@ function handleNavigation(event) {
 
 // 유효한 페이지인지 확인
 function isValidPage(page) {
-    const validPages = ['home', 'schedule', 'education', 'apply', 'confirm', 'faq', 'contact'];
+    const validPages = ['home', 'schedule', 'education', 'apply', 'confirm', 'faq', 'contact', 'privacy'];
     return validPages.includes(page);
 }
 
@@ -341,6 +342,9 @@ async function loadPage(page) {
                 break;
             case 'contact':
                 content = renderContactPage();
+                break;
+            case 'privacy':
+                content = renderPrivacyPage();
                 break;
             default:
                 content = renderHomePage();
@@ -628,7 +632,7 @@ async function renderEducationPage() {
     
     educationData.forEach((edu) => {
         content += `
-            <div class="education-card" data-status="${edu.displayStatus}" onclick="openEducationModal('${edu.id}')" style="background: white; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); transition: all 0.3s; cursor: pointer;">
+            <div class="education-card" data-status="${edu.displayStatus}" onclick="updateURL('education', '${edu.id}')" style="background: white; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); transition: all 0.3s; cursor: pointer;">
                 <div style="position: relative; width: 100%; height: 200px; overflow: hidden; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
                     <img src="${edu.Image || 'assets/noimage.png'}" alt="${edu.Title}" 
                          style="width: 100%; height: 100%; object-fit: cover; opacity: 0.9;"
@@ -927,6 +931,9 @@ async function renderApplyPage() {
                         <input type="checkbox" id="apply-agree" required style="width: 16px; height: 16px;">
                         <span style="font-size: 14px; color: #374151;">개인정보 수집 및 이용에 동의합니다. *</span>
                     </label>
+                    <div style="margin-top: 4px; padding-left: 24px;">
+                        <button type="button" onclick="openPrivacyModal()" style="font-size: 12px; color: #3b82f6; background: none; border: none; padding: 0; cursor: pointer; text-decoration: underline;">내용 보기</button>
+                    </div>
                 </div>
                 
                 <div style="margin-bottom: 2rem; padding: 1rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;">
@@ -1046,14 +1053,8 @@ async function renderFaqPage() {
 function initializePageSpecificFeatures(page) {
     switch(page) {
         case 'education':
-            // URL 파라미터에서 detail 확인하여 모달 열기
-            setTimeout(() => {
-                const urlParams = getURLParams();
-                if (urlParams.detail) {
-                    openEducationModal(urlParams.detail);
-                }
-                setupEducationFilters();
-            }, 200); // 페이지 렌더링 완료 후 실행
+            // URL 파라미터에서 detail 확인 로직은 handleRouter에서 통합 관리함
+            setupEducationFilters();
             break;
         case 'apply':
             setupApplyForm();
@@ -1163,6 +1164,25 @@ function setupApplyForm() {
                     roundSelect.disabled = true;
                 }
             });
+
+            // URL의 detail 파라미터가 있으면 해당 과정과 회차를 자동 선택
+            const urlParams = getURLParams();
+            if (urlParams.page === 'apply' && urlParams.detail) {
+                const educationId = urlParams.detail;
+                getEducationData().then(data => {
+                    const selectedEdu = data.find(item => item.id == educationId);
+                    if (selectedEdu) {
+                        courseSelect.value = selectedEdu.Title;
+                        // change 이벤트를 명시적으로 발생시켜 회차 목록을 불러옴
+                        courseSelect.dispatchEvent(new Event('change'));
+                        
+                        // 회차 목록이 비동기로 로드되므로 약간의 지연 후 회차 ID 선택
+                        setTimeout(() => {
+                            roundSelect.value = educationId;
+                        }, 500);
+                    }
+                });
+            }
         }
     }
 }
@@ -1488,6 +1508,12 @@ function handleOutsideClick(event) {
 
 // 교육 상세 모달 열기
 async function openEducationModal(educationId) {
+    // 기존에 열려있는 모달이 있다면 즉시 제거하여 중복 방지
+    const existingModal = document.getElementById('education-modal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+
     const rawData = await getEducationData();
     const groupedData = getGroupedEducationData(rawData);
     
@@ -1505,39 +1531,14 @@ async function openEducationModal(educationId) {
                 <div class="education-modal-header">
                     <div style="flex: 1;">
                         <h2 style="margin: 0 0 0.5rem 0; font-size: 1.5rem; font-weight: bold; color: #1f2937;">${education.Title}</h2>
-                        <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                        <!--<div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
                             <span style="background: #dbeafe; color: #1e40af; padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.75rem;">${education.Category}</span>
-                        </div>
+                        </div>-->
                     </div>
                     <button onclick="closeEducationModal()" style="background: none; border: none; font-size: 1.5rem; color: #6b7280; cursor: pointer; padding: 0.5rem;">×</button>
                 </div>
                 
                 <div class="education-modal-body">
-                    <!-- 회차 정보 섹션 추가 -->
-                    <div style="margin-bottom: 2rem;">
-                        <h3 style="font-size: 1.125rem; font-weight: 600; color: #1f2937; margin-bottom: 0.75rem;">교육 일정 (회차 선택)</h3>
-                        <div style="background: #f8fafc; border-radius: 8px; border: 1px solid #e5e7eb; overflow: hidden;">
-                            ${education.rounds.map((r, idx) => `
-                                <div style="display: flex; align-items: center; justify-content: space-between; padding: 1rem; ${idx < education.rounds.length - 1 ? 'border-bottom: 1px solid #e5e7eb;' : ''}">
-                                    <div style="flex: 1;">
-                                        <span style="font-weight: 600; color: #1f2937; margin-right: 0.5rem;">${r.round}회차</span>
-                                        <span style="color: #6b7280; font-size: 0.875rem;">${formatDate(r.startDate)} ~ ${formatDate(r.endDate)}</span>
-                                    </div>
-                                    <div style="display: flex; align-items: center; gap: 0.75rem;">
-                                        <span style="font-size: 0.75rem; font-weight: 600; color: ${getStatusColor(r.status)};">
-                                            ${r.status}
-                                        </span>
-                                        ${(r.status === '모집중') ? `
-                                            <button onclick="applyEducation('${r.id}')" style="background: #3b82f6; color: white; border: none; padding: 0.4rem 0.8rem; border-radius: 4px; font-size: 0.75rem; cursor: pointer;">신청</button>
-                                        ` : `
-                                            <button disabled style="background: #e5e7eb; color: #9ca3af; border: none; padding: 0.4rem 0.8rem; border-radius: 4px; font-size: 0.75rem; cursor: not-allowed;">불가</button>
-                                        `}
-                                    </div>
-                                </div>
-                            `).join('')}
-                        </div>
-                    </div>
-
                     <div style="margin-bottom: 2rem;">
                         <h3 style="font-size: 1.125rem; font-weight: 600; color: #1f2937; margin-bottom: 0.5rem;">교육 개요</h3>
                         <p style="padding: 1rem; background: #f8fafc; border-radius: 8px; color: #374151; line-height: 1.6; white-space: pre-wrap;">${parseMarkdown(education.Description) || '설명이 없습니다.'}</p>
@@ -1569,6 +1570,31 @@ async function openEducationModal(educationId) {
                             <div style="padding: 1rem; background: #f8fafc; border-radius: 8px; color: #374151; line-height: 1.6; white-space: pre-wrap;">${parseMarkdown(education.Location) || '미정'}</div>
                         </div>
                     </div>
+                    
+                    <!-- 회차 정보 섹션 추가 -->
+                    <div style="margin-bottom: 2rem;">
+                        <h3 style="font-size: 1.125rem; font-weight: 600; color: #1f2937; margin-bottom: 0.75rem;">교육 일정 (회차 선택)</h3>
+                        <div style="background: #f8fafc; border-radius: 8px; border: 1px solid #e5e7eb; overflow: hidden;">
+                            ${education.rounds.map((r, idx) => `
+                                <div style="display: flex; align-items: center; justify-content: space-between; padding: 1rem; ${idx < education.rounds.length - 1 ? 'border-bottom: 1px solid #e5e7eb;' : ''}">
+                                    <div style="flex: 1;">
+                                        <span style="font-weight: 600; color: #1f2937; margin-right: 0.5rem;">${r.round}회차</span>
+                                        <span style="color: #6b7280; font-size: 0.875rem;">${formatDate(r.startDate)} ~ ${formatDate(r.endDate)}</span>
+                                    </div>
+                                    <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                        <span style="font-size: 0.75rem; font-weight: 600; color: ${getStatusColor(r.status)};">
+                                            ${r.status}
+                                        </span>
+                                        ${(r.status === '모집중') ? `
+                                            <button onclick="applyEducation('${r.id}')" style="background: #3b82f6; color: white; border: none; padding: 0.4rem 0.8rem; border-radius: 4px; font-size: 0.75rem; cursor: pointer;">신청</button>
+                                        ` : `
+                                            <button disabled style="background: #e5e7eb; color: #9ca3af; border: none; padding: 0.4rem 0.8rem; border-radius: 4px; font-size: 0.75rem; cursor: not-allowed;">불가</button>
+                                        `}
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
                 </div>
                 
                 <div class="education-modal-footer">
@@ -1593,32 +1619,11 @@ async function openEducationModal(educationId) {
 
 // 교육 신청하기 버튼 클릭 처리
 function applyEducation(educationId) {
-    getEducationData().then(data => {
-        const education = data.find(item => item.id == educationId);
-        if (!education) return;
-        
-        closeEducationModal();
-        window.location.hash = 'apply';
-        loadPage('apply');
-        
-        // 페이지가 로드된 후 비동기로 select 박스 값을 변경해야 함
-        setTimeout(() => {
-            const courseSelect = document.getElementById('apply-course');
-            const roundSelect = document.getElementById('apply-round');
-            if (courseSelect && roundSelect) {
-                courseSelect.value = education.Title;
-                // change 이벤트를 강제로 발생시켜 회차 select도 업데이트하게 함
-                // 하지만 inline script의 이벤트를 기다려야 하므로 수동으로 트리거
-                const event = new Event('change', { bubbles: true });
-                courseSelect.dispatchEvent(event);
-                
-                // 회차 select 업데이트(비동기 fetch 등)를 고려하여 약간의 지연 후 id 설정
-                setTimeout(() => {
-                    roundSelect.value = education.id;
-                }, 200);
-            }
-        }, 600);
-    });
+    // 모달을 닫되 URL 업데이트는 하지 않음 (바로 다음 updateURL에서 처리할 것이므로)
+    closeEducationModal(false);
+    
+    // 신청 페이지로 상세 ID와 함께 이동
+    updateURL('apply', educationId);
 }
 
 // 교육 상세 모달 닫기
@@ -1641,4 +1646,90 @@ function closeEducationModal(shouldUpdateURL = true) {
 function getCurrentPage() {
     const activeNav = document.querySelector('.nav-item.active, .mobile-nav-item.active');
     return activeNav ? activeNav.getAttribute('data-page') : 'home';
+}
+
+// 개인정보처리방침 페이지 렌더링
+function renderPrivacyPage() {
+    return `
+        <div class="content-card">
+            <h1 style="font-size: 1.875rem; font-weight: bold; color: #1f2937; margin-bottom: 1.5rem;">개인정보처리방침</h1>
+            <div style="color: #374151; line-height: 1.7; font-size: 0.95rem;">
+                <p>SBSA&T(이하 '운영자')는 이용자의 개인정보를 보호하고 관련 법령을 준수하기 위해 다음과 같은 처리방침을 두고 있습니다.</p>
+                
+                <h3 style="font-size: 1.15rem; font-weight: 700; margin-top: 1.5rem; margin-bottom: 0.5rem;">1. 수집하는 개인정보 항목</h3>
+                <p>운영자는 교육 신청 및 상담을 위해 아래와 같은 개인정보를 수집하고 있습니다.</p>
+                <ul style="margin-bottom: 1rem; padding-left: 1.5rem;">
+                    <li>필수항목: 이름, 이메일, 연락처, 희망 교육 과정, 직군/직급</li>
+                    <li>선택항목: 재직여부, 회사명</li>
+                </ul>
+
+                <h3 style="font-size: 1.15rem; font-weight: 700; margin-top: 1.5rem; margin-bottom: 0.5rem;">2. 개인정보의 수집 및 이용 목적</h3>
+                <p>수집된 개인정보는 다음의 목적을 위해 활용됩니다.</p>
+                <ul style="margin-bottom: 1rem; padding-left: 1.5rem;">
+                    <li>교육 과정 신청 접수 및 수강생 선발</li>
+                    <li>교육 관련 안내 사항 전달 (이메일, 문자 등)</li>
+                    <li>신규 교육 과정 안내 및 만족도 조사</li>
+                    <li>고용노동부 등 관계 기관의 훈련생 관리 및 보고</li>
+                </ul>
+
+                <h3 style="font-size: 1.15rem; font-weight: 700; margin-top: 1.5rem; margin-bottom: 0.5rem;">3. 개인정보의 보유 및 이용 기간</h3>
+                <p>운영자는 원칙적으로 개인정보 수집 및 이용목적이 달성된 후에는 해당 정보를 지체 없이 파기합니다. 단, 관계법령의 규정에 의하여 보존할 필요가 있는 경우 아래와 같이 일정 기간 보관합니다.</p>
+                <ul style="margin-bottom: 1rem; padding-left: 1.5rem;">
+                    <li>교육 신청 및 관리 기록: 교육 종료 후 3년</li>
+                    <li>소비자의 불만 또는 분쟁처리에 관한 기록: 3년</li>
+                </ul>
+
+                <h3 style="font-size: 1.15rem; font-weight: 700; margin-top: 1.5rem; margin-bottom: 0.5rem;">4. 개인정보의 파기절차 및 방법</h3>
+                <p>개인정보의 파기는 목적이 달성된 개인정보를 전자적 파일 형태의 경우 복구가 불가능한 방법으로 영구 삭제하며, 출력물 등은 분쇄하거나 소각하여 파기합니다.</p>
+
+                <h3 style="font-size: 1.15rem; font-weight: 700; margin-top: 1.5rem; margin-bottom: 0.5rem;">5. 이용자의 권리와 그 행사방법</h3>
+                <p>이용자는 언제든지 등록되어 있는 자신의 개인정보를 조회하거나 수정할 수 있으며 가입해지(동의철회)를 요청할 수 있습니다.</p>
+
+                <h3 style="font-size: 1.15rem; font-weight: 700; margin-top: 1.5rem; margin-bottom: 0.5rem;">6. 개인정보 보호책임자</h3>
+                <p>이용자의 개인정보를 보호하고 관련 불만을 처리하기 위하여 아래와 같이 개인정보 보호책임자를 지정하고 있습니다.</p>
+                <p style="background: #f8fafc; padding: 1rem; border-radius: 8px; border: 1px solid #e2e8f0;">
+                    이름: 이종헌<br>
+                    이메일: haba@sbs.co.kr<br>
+                </p>
+                <!--<p style="margin-top: 2rem; font-size: 0.85rem; color: #6b7280;">본 방침은 2026년 1월 14일부터 시행됩니다.</p>-->
+            </div>
+        </div>
+    `;
+}
+
+// 개인정보처리방침 모달 열기
+function openPrivacyModal() {
+    const content = renderPrivacyPage();
+    const modalHTML = `
+        <div id="privacy-modal" class="education-modal">
+            <div class="education-modal-backdrop" onclick="closePrivacyModal()"></div>
+            <div class="education-modal-content" style="max-width: 800px; margin: 2rem auto; border-radius: 12px; height: auto; max-height: 80vh;">
+                <div class="education-modal-header">
+                    <h2 style="margin: 0; font-size: 1.5rem;">개인정보 처리 안내</h2>
+                    <button onclick="closePrivacyModal()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">×</button>
+                </div>
+                <div class="education-modal-body" style="padding: 2rem; overflow-y: auto;">
+                    ${content}
+                </div>
+                <div class="education-modal-footer">
+                    <button onclick="closePrivacyModal()" class="btn-primary">닫기</button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    setTimeout(() => {
+        const modal = document.getElementById('privacy-modal');
+        if (modal) modal.classList.add('active');
+    }, 10);
+}
+
+// 개인정보처리방침 모달 닫기
+function closePrivacyModal() {
+    const modal = document.getElementById('privacy-modal');
+    if (modal) {
+        modal.classList.remove('active');
+        setTimeout(() => modal.remove(), 300);
+    }
 }
