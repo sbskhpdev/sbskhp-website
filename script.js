@@ -6,6 +6,7 @@ const API_URL = "https://script.google.com/macros/s/AKfycbwkBLDzJKbSWYDGv8EmcgpU
 // 전역 데이터 캐시
 let cachedEducationData = null;
 let cachedFaqData = null;
+let cachedCompanyData = null;
 
 // 현재 활성 페이지 상태
 let currentPage = null;
@@ -117,6 +118,60 @@ async function getEducationData() {
         console.error("교육 데이터 로드 실패:", error);
         return [];
     }
+}
+
+// SBS 계열사 데이터 가져오기
+async function getCompanyData() {
+    if (cachedCompanyData) return cachedCompanyData;
+    try {
+        const response = await fetch(`${API_URL}?type=SBS%20Companys`);
+        const data = await response.json();
+        if (Array.isArray(data)) {
+            cachedCompanyData = data.map(item => item['Company Name']).filter(Boolean);
+            return cachedCompanyData;
+        }
+        return [];
+    } catch (error) {
+        console.error("계열사 데이터 로드 실패:", error);
+        return [];
+    }
+}
+
+// 교육 데이터를 제목(Title) 기준으로 그룹화
+function getGroupedEducationData(data) {
+    const groups = {};
+    data.forEach(item => {
+        if (!groups[item.Title]) {
+            groups[item.Title] = {
+                ...item,
+                rounds: []
+            };
+        }
+        groups[item.Title].rounds.push({
+            id: item.id,
+            round: item['회차'],
+            startDate: item['Start Date'],
+            endDate: item['End Date'],
+            status: item.Status,
+            eventId: item['Event ID']
+        });
+    });
+
+    // 각 그룹의 대표 상태 결정 (모집중이 하나라도 있으면 모집중, 아니면 가장 긍정적인 상태 순)
+    return Object.values(groups).map(group => {
+        const statuses = group.rounds.map(r => r.status);
+        let finalStatus = '마감';
+        
+        if (statuses.includes('모집중')) finalStatus = '모집중';
+        else if (statuses.includes('모집예정')) finalStatus = '모집예정';
+        else if (statuses.includes('모집마감')) finalStatus = '모집마감';
+        else if (statuses.includes('폐강')) finalStatus = '폐강';
+        
+        return {
+            ...group,
+            displayStatus: finalStatus
+        };
+    });
 }
 
 // DOM 로드 완료 후 초기화
@@ -550,7 +605,8 @@ function renderSchedulePage() {
 
 // 교육 정보 페이지 렌더링
 async function renderEducationPage() {
-    const educationData = await getEducationData();
+    const rawData = await getEducationData();
+    const educationData = getGroupedEducationData(rawData);
 
     let content = `
         <div class="content-card">
@@ -572,14 +628,14 @@ async function renderEducationPage() {
     
     educationData.forEach((edu) => {
         content += `
-            <div class="education-card" data-status="${edu.Status}" onclick="openEducationModal('${edu.id}')" style="background: white; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); transition: all 0.3s; cursor: pointer;">
+            <div class="education-card" data-status="${edu.displayStatus}" onclick="openEducationModal('${edu.id}')" style="background: white; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); transition: all 0.3s; cursor: pointer;">
                 <div style="position: relative; width: 100%; height: 200px; overflow: hidden; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
                     <img src="${edu.Image || 'assets/noimage.png'}" alt="${edu.Title}" 
                          style="width: 100%; height: 100%; object-fit: cover; opacity: 0.9;"
                          onerror="this.src='assets/noimage.png'">
                     <div style="position: absolute; top: 12px; right: 12px;">
-                        <span class="status-badge" style="display: inline-block; background-color: ${getStatusColor(edu.Status)}; color: white; font-size: 0.75rem; font-weight: 600; padding: 0.25rem 0.75rem; border-radius: 20px;">
-                            ${edu.Status}
+                        <span class="status-badge" style="display: inline-block; background-color: ${getStatusColor(edu.displayStatus)}; color: white; font-size: 0.75rem; font-weight: 600; padding: 0.25rem 0.75rem; border-radius: 20px;">
+                            ${edu.displayStatus}
                         </span>
                     </div>
                 </div>
@@ -589,12 +645,8 @@ async function renderEducationPage() {
                     <p style="margin: 0 0 1rem 0; font-size: 0.875rem; color: #6b7280; line-height: 1.5; height: 2.6rem; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">
                         ${edu.Description || ''}
                     </p>
-                    
-                    <div style="font-size: 0.85rem; color: #6b7280; margin-bottom: 0.5rem;">
-                        ${formatDate(edu['Start Date'])} ~ ${formatDate(edu['End Date'])}</span>
-                    </div>
                     <div style="font-size: 0.85rem; color: #6b7280;">
-                        ${edu.Location || '추후 공지'}</span>
+                        ${edu.Location || '추후 공지'}
                     </div>
                 </div>
             </div>
@@ -793,15 +845,26 @@ function renderContactPage() {
 
 // 교육 신청 페이지 렌더링
 async function renderApplyPage() {
-    const data = await getEducationData();
-    const activeEducations = data.filter(edu => edu.Status === '모집중' || edu.Status === '준비중');
+    const rawData = await getEducationData();
+    // 모집중이거나 준비중인 회차가 하나라도 있는 과정들만 필터링
+    const groupedData = getGroupedEducationData(rawData).filter(group => 
+        group.rounds.some(r => r.status === '모집중' || r.status === '모집예정')
+    );
 
     return `
         <div class="content-card">
             <h1 style="font-size: 1.875rem; font-weight: bold; color: #1f2937; margin-bottom: 1.5rem;">교육 신청</h1>
             <p style="color: #6b7280; margin-bottom: 1.5rem;">원하시는 교육 과정에 신청해주세요. 신청 완료 후 담당자가 연락드립니다.</p>
             
+            <!-- 신청 폼 유형 선택 -->
+            <div style="display: flex; gap: 0.5rem; margin-bottom: 2rem; border-bottom: 1px solid #e5e7eb; padding-bottom: 1rem;">
+                <button type="button" class="form-type-btn active" data-type="general" style="padding: 10px 20px; border-radius: 8px; border: 1px solid #3b82f6; background: #3b82f6; color: white; cursor: pointer; font-weight: 600; transition: all 0.2s;">일반 신청</button>
+                <button type="button" class="form-type-btn" data-type="sbs" style="padding: 10px 20px; border-radius: 8px; border: 1px solid #e5e7eb; background: white; color: #374151; cursor: pointer; font-weight: 600; transition: all 0.2s;">SBS 계열사 직원 신청</button>
+            </div>
+
             <form id="apply-form" style="max-width: 600px;">
+                <input type="hidden" id="apply-form-type" value="general">
+                
                 <div style="margin-bottom: 1.5rem;">
                     <label class="form-label">이름 *</label>
                     <input type="text" id="apply-name" class="form-input" placeholder="홍길동" required>
@@ -817,19 +880,25 @@ async function renderApplyPage() {
                     <input type="tel" id="apply-phone" class="form-input" placeholder="010-1234-5678" required>
                 </div>
                 
-                <div style="margin-bottom: 1.5rem;">
-                    <label class="form-label">희망 교육 과정 *</label>
-                    <select id="apply-course" class="form-input" required style="cursor: pointer;">
-                        <option value="">교육 과정을 선택해주세요</option>
-                        ${activeEducations.map(edu => `
-                            <option value="${edu.Title}" data-start="${edu['Start Date'] || ''}" data-end="${edu['End Date'] || ''}">
-                                ${edu.Title} (${edu.ScheduleInfo})
-                            </option>
-                        `).join('')}
-                    </select>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
+                    <div>
+                        <label class="form-label">희망 교육 과정 *</label>
+                        <select id="apply-course" class="form-input" required style="cursor: pointer;">
+                            <option value="">교육 과정을 선택해주세요</option>
+                            ${groupedData.map(group => `
+                                <option value="${group.Title}">${group.Title}</option>
+                            `).join('')}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="form-label">회차 선택 *</label>
+                        <select id="apply-round" class="form-input" required style="cursor: pointer;" disabled>
+                            <option value="">과정을 먼저 선택해주세요</option>
+                        </select>
+                    </div>
                 </div>
                 
-                <div style="margin-bottom: 1.5rem;">
+                <div id="employment-section" style="margin-bottom: 1.5rem;">
                     <label class="form-label">재직여부</label>
                     <select id="apply-employment" class="form-input" style="cursor: pointer;" required>
                         <option value="">선택해주세요</option>
@@ -842,8 +911,10 @@ async function renderApplyPage() {
                 </div>
                 
                 <div style="margin-bottom: 1.5rem;">
-                    <label class="form-label">회사명 (재직중인 경우)</label>
-                    <input type="text" id="apply-company" class="form-input" placeholder="회사명을 입력해주세요">
+                    <label class="form-label">회사명 <span id="company-suffix">(재직중인 경우)</span></label>
+                    <div id="company-input-container">
+                        <input type="text" id="apply-company" class="form-input" placeholder="회사명을 입력해주세요">
+                    </div>
                 </div>
                 
                 <div style="margin-bottom: 1.5rem;">
@@ -1001,6 +1072,98 @@ function setupApplyForm() {
     const applyForm = document.getElementById('apply-form');
     if (applyForm) {
         applyForm.addEventListener('submit', handleApplySubmit);
+        
+        // --- 폼 유형 선택 로직 추가 ---
+        const typeBtns = document.querySelectorAll('.form-type-btn');
+        const hiddenTypeInput = document.getElementById('apply-form-type');
+        const employmentSection = document.getElementById('employment-section');
+        const employmentSelect = document.getElementById('apply-employment');
+        const companyContainer = document.getElementById('company-input-container');
+        const companySuffix = document.getElementById('company-suffix');
+
+        typeBtns.forEach(btn => {
+            btn.addEventListener('click', async function() {
+                const type = this.getAttribute('data-type');
+                
+                // 버튼 스타일 업데이트
+                typeBtns.forEach(b => {
+                    b.classList.remove('active');
+                    b.style.background = 'white';
+                    b.style.color = '#374151';
+                    b.style.borderColor = '#e5e7eb';
+                });
+                this.classList.add('active');
+                this.style.background = '#3b82f6';
+                this.style.color = 'white';
+                this.style.borderColor = '#3b82f6';
+                
+                hiddenTypeInput.value = type;
+
+                if (type === 'sbs') {
+                    // SBS 직원용 신청폼 커스터마이징
+                    employmentSection.style.display = 'none';
+                    employmentSelect.value = '재직중';
+                    companySuffix.innerText = '(SBS 계열사 선택)';
+                    
+                    // 회사명 드롭다운으로 교체
+                    companyContainer.innerHTML = '<div class="spinner" style="width: 20px; height: 20px; border-width: 2px;"></div> 로딩 중...';
+                    const companies = await getCompanyData();
+                    
+                    let selectHtml = '<select id="apply-company" class="form-input" style="cursor: pointer;" required>';
+                    selectHtml += '<option value="">회사를 선택해주세요</option>';
+                    companies.forEach(company => {
+                        selectHtml += `<option value="${company}">${company}</option>`;
+                    });
+                    selectHtml += '</select>';
+                    companyContainer.innerHTML = selectHtml;
+                } else {
+                    // 일반 신청폼으로 원복
+                    employmentSection.style.display = 'block';
+                    employmentSelect.value = '';
+                    companySuffix.innerText = '(재직중인 경우)';
+                    companyContainer.innerHTML = '<input type="text" id="apply-company" class="form-input" placeholder="회사명을 입력해주세요">';
+                }
+            });
+        });
+        // -----------------------
+
+        // 과정 선택 시 회차 목록 동적 업데이트 추가
+        const courseSelect = document.getElementById('apply-course');
+        const roundSelect = document.getElementById('apply-round');
+        
+        if (courseSelect && roundSelect) {
+            courseSelect.addEventListener('change', async function() {
+                const selectedTitle = this.value;
+                roundSelect.innerHTML = '<option value="">회차를 선택해주세요</option>';
+                
+                if (!selectedTitle) {
+                    roundSelect.disabled = true;
+                    return;
+                }
+
+                const data = await getEducationData();
+                const rounds = data.filter(edu => edu.Title === selectedTitle && (edu.Status === '모집중' || edu.Status === '모집예정'));
+                
+                if (rounds.length > 0) {
+                    rounds.forEach(r => {
+                        const option = document.createElement('option');
+                        option.value = r.id; 
+                        option.textContent = `${r['회차']}회차 (${formatDate(r['Start Date'])} ~ ${formatDate(r['End Date'])})`;
+                        if (r.Status === '모집예정') {
+                            option.textContent += ' [모집예정]';
+                        }
+                        option.setAttribute('data-round', r['회차']);
+                        option.setAttribute('data-start', r['Start Date']);
+                        option.setAttribute('data-end', r['End Date']);
+                        roundSelect.appendChild(option);
+                    });
+                    roundSelect.disabled = false;
+                } else {
+                    roundSelect.innerHTML = '<option value="">모집 중인 회차가 없습니다</option>';
+                    roundSelect.disabled = true;
+                }
+            });
+        }
     }
 }
 
@@ -1012,24 +1175,39 @@ async function handleApplySubmit(event) {
     const originalBtnText = submitBtn.innerText;
     
     const courseSelect = document.getElementById('apply-course');
-    const selectedOption = courseSelect.options[courseSelect.selectedIndex];
+    const roundSelect = document.getElementById('apply-round');
+    
+    if (!courseSelect.value || !roundSelect.value) {
+        alert('교육 과정과 회차를 선택해 주세요.');
+        return;
+    }
+
+    const selectedRoundOption = roundSelect.options[roundSelect.selectedIndex];
     
     const formData = {
         name: document.getElementById('apply-name').value.trim(),
         email: document.getElementById('apply-email').value.trim(),
         phone: document.getElementById('apply-phone').value.trim(),
-        course: courseSelect.value,
-        startDate: selectedOption.getAttribute('data-start'),
-        endDate: selectedOption.getAttribute('data-end'),
+        // 과정명 뒤에 회차 정보를 붙여서 전송 (Applications 시트 기록용)
+        course: `${courseSelect.value} (${selectedRoundOption.getAttribute('data-round')}회차)`,
+        startDate: selectedRoundOption.getAttribute('data-start'),
+        endDate: selectedRoundOption.getAttribute('data-end'),
         employment: document.getElementById('apply-employment').value,
         company: document.getElementById('apply-company').value.trim(),
         position: document.getElementById('apply-position').value.trim(),
-        agree: document.getElementById('apply-agree').checked
+        agree: document.getElementById('apply-agree').checked,
+        formType: document.getElementById('apply-form-type').value
     };
     
     // 필수 항목 검증
     if (!formData.name || !formData.email || !formData.phone || !formData.course || !formData.employment || !formData.position || !formData.agree) {
         alert('모든 필수 항목을 입력하고 동의해 주세요.');
+        return;
+    }
+
+    // SBS 직원 신청의 경우 회사명 필수 체크
+    if (formData.formType === 'sbs' && !formData.company) {
+        alert('소속 회사를 선택해 주세요.');
         return;
     }
     
@@ -1310,8 +1488,11 @@ function handleOutsideClick(event) {
 
 // 교육 상세 모달 열기
 async function openEducationModal(educationId) {
-    const data = await getEducationData();
-    const education = data.find(item => item.id == educationId);
+    const rawData = await getEducationData();
+    const groupedData = getGroupedEducationData(rawData);
+    
+    // educationId가 그룹 내 어떤 아이템의 ID라도 해당 그룹을 찾음
+    const education = groupedData.find(group => group.rounds.some(r => r.id == educationId));
     if (!education) return;
     
     // URL 업데이트
@@ -1324,23 +1505,46 @@ async function openEducationModal(educationId) {
                 <div class="education-modal-header">
                     <div style="flex: 1;">
                         <h2 style="margin: 0 0 0.5rem 0; font-size: 1.5rem; font-weight: bold; color: #1f2937;">${education.Title}</h2>
-                        <div style="margin: 0 0 0.5rem 0; color: #374151; line-height: 1.6; white-space: pre-wrap;">${formatDate(education['Start Date'])} ~ ${formatDate(education['End Date'])}</div>
                         <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
                             <span style="background: #dbeafe; color: #1e40af; padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.75rem;">${education.Category}</span>
-                            <span style="background: #dcfce7; color: #166534; padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.75rem;">${education.Level}</span>
                         </div>
                     </div>
                     <button onclick="closeEducationModal()" style="background: none; border: none; font-size: 1.5rem; color: #6b7280; cursor: pointer; padding: 0.5rem;">×</button>
                 </div>
                 
                 <div class="education-modal-body">
+                    <!-- 회차 정보 섹션 추가 -->
+                    <div style="margin-bottom: 2rem;">
+                        <h3 style="font-size: 1.125rem; font-weight: 600; color: #1f2937; margin-bottom: 0.75rem;">교육 일정 (회차 선택)</h3>
+                        <div style="background: #f8fafc; border-radius: 8px; border: 1px solid #e5e7eb; overflow: hidden;">
+                            ${education.rounds.map((r, idx) => `
+                                <div style="display: flex; align-items: center; justify-content: space-between; padding: 1rem; ${idx < education.rounds.length - 1 ? 'border-bottom: 1px solid #e5e7eb;' : ''}">
+                                    <div style="flex: 1;">
+                                        <span style="font-weight: 600; color: #1f2937; margin-right: 0.5rem;">${r.round}회차</span>
+                                        <span style="color: #6b7280; font-size: 0.875rem;">${formatDate(r.startDate)} ~ ${formatDate(r.endDate)}</span>
+                                    </div>
+                                    <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                        <span style="font-size: 0.75rem; font-weight: 600; color: ${getStatusColor(r.status)};">
+                                            ${r.status}
+                                        </span>
+                                        ${(r.status === '모집중') ? `
+                                            <button onclick="applyEducation('${r.id}')" style="background: #3b82f6; color: white; border: none; padding: 0.4rem 0.8rem; border-radius: 4px; font-size: 0.75rem; cursor: pointer;">신청</button>
+                                        ` : `
+                                            <button disabled style="background: #e5e7eb; color: #9ca3af; border: none; padding: 0.4rem 0.8rem; border-radius: 4px; font-size: 0.75rem; cursor: not-allowed;">불가</button>
+                                        `}
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+
                     <div style="margin-bottom: 2rem;">
                         <h3 style="font-size: 1.125rem; font-weight: 600; color: #1f2937; margin-bottom: 0.5rem;">교육 개요</h3>
                         <p style="padding: 1rem; background: #f8fafc; border-radius: 8px; color: #374151; line-height: 1.6; white-space: pre-wrap;">${parseMarkdown(education.Description) || '설명이 없습니다.'}</p>
                     </div>
                     <div style="margin-bottom: 2rem;">
-                        <h3 style="font-size: 1.125rem; font-weight: 600; color: #1f2937; margin-bottom: 0.75rem;">학습목표</h3>
-                        <div style="padding: 1rem; background: #f8fafc; border-radius: 8px; color: #374151; line-height: 1.6; white-space: pre-wrap;">${parseMarkdown(education.Benefits) || '등록된 커리큘럼이 없습니다.'}</div>
+                        <h3 style="font-size: 1.125rem; font-weight: 600; color: #1f2937; margin-bottom: 0.75rem;">학습목표 및 혜택</h3>
+                        <div style="padding: 1rem; background: #f8fafc; border-radius: 8px; color: #374151; line-height: 1.6; white-space: pre-wrap;">${parseMarkdown(education.Benefits) || '등록된 혜택이 없습니다.'}</div>
                     </div>
                     <div style="margin-bottom: 2rem;">
                         <h3 style="font-size: 1.125rem; font-weight: 600; color: #1f2937; margin-bottom: 0.75rem;">커리큘럼</h3>
@@ -1351,20 +1555,19 @@ async function openEducationModal(educationId) {
                         <div style="padding: 1rem; background: #eef5fdff; border-radius: 8px; color: #374151; line-height: 1.6; white-space: pre-wrap;">${parseMarkdown(education.Instructor) || '미정'}</div>
                     </div>
 
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; border-bottom: 1px solid #d3d6daff;">
-                    </div>
-
                     <div style="margin-bottom: 2rem;">
                         <h3 style="font-size: 1.125rem; font-weight: 600; color: #1f2937; margin-bottom: 0.75rem;">지원 대상 및 조건</h3>
-                        <div style="padding: 1rem; background: #ffefed; border-radius: 8px; color: #374151; line-height: 1.6; white-space: pre-wrap;">${parseMarkdown(education.Requirements) || '특별한 수강 요건이 없습니다.'}</div>
+                        <div style="padding: 1rem; background: #fffefed; border-radius: 8px; color: #374151; line-height: 1.6; white-space: pre-wrap;">${parseMarkdown(education.Requirements) || '특별한 수강 요건이 없습니다.'}</div>
                     </div>
-                    <div style="margin-bottom: 2rem;">
-                        <h3 style="font-size: 1.125rem; font-weight: 600; color: #1f2937; margin-bottom: 0.75rem;">수강료</h3>
-                        <div style="padding: 1rem; background: #ffefed; border-radius: 8px; color: #374151; line-height: 1.6; white-space: pre-wrap;">${parseMarkdown(education.Price) || '무료'}</div>
-                    </div>
-                    <div style="margin-bottom: 2rem;">
-                        <h3 style="font-size: 1.125rem; font-weight: 600; color: #1f2937; margin-bottom: 0.75rem;">장소</h3>
-                        <div style="padding: 1rem; background: #ffefed; border-radius: 8px; color: #374151; line-height: 1.6; white-space: pre-wrap;">${parseMarkdown(education.Location) || '미정'}</div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        <div style="margin-bottom: 2rem;">
+                            <h3 style="font-size: 1.125rem; font-weight: 600; color: #1f2937; margin-bottom: 0.75rem;">수강료</h3>
+                            <div style="padding: 1rem; background: #f8fafc; border-radius: 8px; color: #374151; line-height: 1.6; white-space: pre-wrap;">${parseMarkdown(education.Price) || '무료'}</div>
+                        </div>
+                        <div style="margin-bottom: 2rem;">
+                            <h3 style="font-size: 1.125rem; font-weight: 600; color: #1f2937; margin-bottom: 0.75rem;">장소</h3>
+                            <div style="padding: 1rem; background: #f8fafc; border-radius: 8px; color: #374151; line-height: 1.6; white-space: pre-wrap;">${parseMarkdown(education.Location) || '미정'}</div>
+                        </div>
                     </div>
                 </div>
                 
@@ -1372,23 +1575,6 @@ async function openEducationModal(educationId) {
                     <button onclick="closeEducationModal()" style="background: #f3f4f6; color: #374151; border: none; padding: 0.75rem 1.5rem; border-radius: 8px; font-weight: 500; cursor: pointer; margin-right: 1rem;">
                         닫기
                     </button>
-                    ${(education.Status === '모집마감' || education.Status === '마감') ? `
-                        <button onclick="alert('모집이 마감되었습니다.');" style="background: #9ca3af; color: white; border: none; padding: 0.75rem 2rem; border-radius: 8px; font-weight: 500; cursor: not-allowed;">
-                            마감
-                        </button>
-                    ` : education.Status === '모집예정' ? `
-                        <button onclick="alert('모집 예정인 강의입니다.');" style="background: #9ca3af; color: white; border: none; padding: 0.75rem 2rem; border-radius: 8px; font-weight: 500; cursor: not-allowed;">
-                            모집예정
-                        </button>
-                    ` : education.Status === '폐강' ? `
-                        <button onclick="alert('부득이한 사정으로 폐강된 강의입니다.');" style="background: #ef4444; color: white; border: none; padding: 0.75rem 2rem; border-radius: 8px; font-weight: 500; cursor: not-allowed;">
-                            폐강
-                        </button>
-                    ` : `
-                        <button onclick="applyEducation('${education.id}')" style="background: #3b82f6; color: white; border: none; padding: 0.75rem 2rem; border-radius: 8px; font-weight: 500; cursor: pointer;">
-                            신청하기
-                        </button>
-                    `}
                 </div>
             </div>
         </div>
@@ -1418,10 +1604,20 @@ function applyEducation(educationId) {
         // 페이지가 로드된 후 비동기로 select 박스 값을 변경해야 함
         setTimeout(() => {
             const courseSelect = document.getElementById('apply-course');
-            if (courseSelect) {
+            const roundSelect = document.getElementById('apply-round');
+            if (courseSelect && roundSelect) {
                 courseSelect.value = education.Title;
+                // change 이벤트를 강제로 발생시켜 회차 select도 업데이트하게 함
+                // 하지만 inline script의 이벤트를 기다려야 하므로 수동으로 트리거
+                const event = new Event('change', { bubbles: true });
+                courseSelect.dispatchEvent(event);
+                
+                // 회차 select 업데이트(비동기 fetch 등)를 고려하여 약간의 지연 후 id 설정
+                setTimeout(() => {
+                    roundSelect.value = education.id;
+                }, 200);
             }
-        }, 500);
+        }, 600);
     });
 }
 
