@@ -399,7 +399,7 @@ function renderHomePage() {
             <video autoplay muted loop playsinline style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;">
                 <source src="./assets/image/home-bg.mp4" type="video/mp4">
             </video>
-            <div class="content-card-1-1" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.5rem; margin-bottom: 3rem; position: relative; z-index: 1;">
+            <div class="content-card-1-1" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 3rem; position: relative; z-index: 1;">
                 <div style="padding: 1.5rem .5rem; border-radius: 8px; text-align: center; cursor: pointer;" class="hover-lift" onclick="updateURL('schedule');">
                     <div style="width: 48px; height: 48px; margin: 0 auto 1rem; background-color: #4f46e5; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
                         <svg style="width: 24px; height: 24px; color: white;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -420,7 +420,7 @@ function renderHomePage() {
                     <p class="service-description" style="color: #6b7280; font-size: 0.875rem;">전문 강사진이 제공하는 체계적인 교육 프로그램</p>
                 </div>
                 
-                <div style="padding: 1.5rem .5rem; border-radius: 8px; text-align: center; cursor: pointer;" class="hover-lift" onclick="updateURL('apply');">
+                <div style="padding: 1.5rem .5rem; border-radius: 8px; text-align: center; cursor: pointer; display: none;" class="hover-lift" onclick="updateURL('apply');">
                     <div style="width: 48px; height: 48px; margin: 0 auto 1rem; background-color: #d97706; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
                         <svg style="width: 24px; height: 24px; color: white;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path    stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
@@ -446,7 +446,7 @@ function renderHomePage() {
                         제작하는 현장 맞춤형 커리큘럼을 제공합니다</p>
                     </div>
                     
-                    <div style="display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap; margin-top: 2rem;">
+                    <div style="display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap; margin-top: 2rem; display: none;">
                         <button onclick="updateURL('education');" style="background: #F59E0B; border: none; color: white; font-weight: 600; padding: 1rem 2rem; border-radius: 50px; cursor: pointer; transition: all 0.3s; font-size: 1rem; box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3);" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(245, 158, 11, 0.4)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(245, 158, 11, 0.3)'">
                             지금 시작하기
                         </button>
@@ -461,7 +461,7 @@ function renderHomePage() {
                     <button onclick="updateURL('education');" style="background-color: white; color: #4f46e5; font-weight: 600; padding: 12px 24px; border-radius: 6px; border: none; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.backgroundColor='#f3f4f6'" onmouseout="this.style.backgroundColor='white'">
                         교육 정보 보기
                     </button>
-                    <button onclick="updateURL('apply');" style="border: 2px solid white; background: transparent; color: white; font-weight: 600; padding: 12px 24px; border-radius: 6px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.backgroundColor='white'; this.style.color='#4f46e5'" onmouseout="this.style.backgroundColor='transparent'; this.style.color='white'">
+                    <button onclick="updateURL('apply');" style="border: 2px solid white; background: transparent; color: white; font-weight: 600; padding: 12px 24px; border-radius: 6px; cursor: pointer; transition: all 0.2s; display: none;" onmouseover="this.style.backgroundColor='white'; this.style.color='#4f46e5'" onmouseout="this.style.backgroundColor='transparent'; this.style.color='white'">
                         교육 신청하기
                     </button>
                 </div>
@@ -1572,7 +1572,7 @@ async function openEducationModal(educationId) {
                     </div>
                     
                     <!-- 회차 정보 섹션 추가 -->
-                    <div style="margin-bottom: 2rem;">
+                    <div style="margin-bottom: 2rem; display:none;">
                         <h3 style="font-size: 1.125rem; font-weight: 600; color: #1f2937; margin-bottom: 0.75rem;">교육 일정 (회차 선택)</h3>
                         <div style="background: #f8fafc; border-radius: 8px; border: 1px solid #e5e7eb; overflow: hidden;">
                             ${education.rounds.map((r, idx) => `
