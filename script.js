@@ -650,7 +650,7 @@ async function renderEducationPage() {
                         ${edu.Description || ''}
                     </p>
                     <div style="font-size: 0.85rem; color: #6b7280;">
-                        ${edu.Location || '추후 공지'}
+                        ${edu.Location || ''}
                     </div>
                 </div>
             </div>
