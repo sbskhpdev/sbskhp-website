@@ -1544,7 +1544,7 @@ async function openEducationModal(educationId) {
                         <p style="padding: 1rem; background: #f8fafc; border-radius: 8px; color: #374151; line-height: 1.6; white-space: pre-wrap;">${parseMarkdown(education.Description) || '설명이 없습니다.'}</p>
                     </div>
                     <div style="margin-bottom: 2rem;">
-                        <h3 style="font-size: 1.125rem; font-weight: 600; color: #1f2937; margin-bottom: 0.75rem;">학습목표 및 혜택</h3>
+                        <h3 style="font-size: 1.125rem; font-weight: 600; color: #1f2937; margin-bottom: 0.75rem;">학습목표</h3>
                         <div style="padding: 1rem; background: #f8fafc; border-radius: 8px; color: #374151; line-height: 1.6; white-space: pre-wrap;">${parseMarkdown(education.Benefits) || '등록된 혜택이 없습니다.'}</div>
                     </div>
                     <div style="margin-bottom: 2rem;">
