@@ -399,7 +399,7 @@ function renderHomePage() {
             <video autoplay muted loop playsinline style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;">
                 <source src="./assets/image/home-bg.mp4" type="video/mp4">
             </video>
-            <div class="content-card-1-1" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 3rem; position: relative; z-index: 1;">
+            <div class="content-card-1-1" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.5rem; margin-bottom: 3rem; position: relative; z-index: 1;">
                 <div style="padding: 1.5rem .5rem; border-radius: 8px; text-align: center; cursor: pointer;" class="hover-lift" onclick="updateURL('schedule');">
                     <div style="width: 48px; height: 48px; margin: 0 auto 1rem; background-color: #4f46e5; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
                         <svg style="width: 24px; height: 24px; color: white;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -571,8 +571,8 @@ function renderSchedulePage() {
     
     return `
         <div class="content-card">
-            <h1 style="font-size: 1.875rem; font-weight: bold; color: #1f2937; margin-bottom: 1.5rem;">AI 교육 일정</h1>
-            <p style="color: #6b7280; margin-bottom: 1.5rem;">구글 캘린더를 통해 실시간으로 업데이트되는 교육 일정을 확인하세요.</p>
+            <h1 style="font-size: 1.875rem; font-weight: bold; color: #1f2937; margin-bottom: 1.5rem;">교육 일정</h1>
+            <!--<p style="color: #6b7280; margin-bottom: 1.5rem;">구글 캘린더를 통해 실시간으로 업데이트되는 교육 일정을 확인하세요.</p>-->
             
             <div class="calendar-container">
                 <iframe 
