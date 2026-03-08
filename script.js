@@ -622,9 +622,9 @@ async function renderEducationPage() {
                 <button class="filter-btn active" data-filter="all" style="padding: 8px 16px; border-radius: 20px; border: 1px solid #e5e7eb; background: #3b82f6; color: white; cursor: pointer; font-size: 0.875rem; font-weight: 500; transition: all 0.2s;">전체</button>
                 <button class="filter-btn" data-filter="모집중" style="padding: 8px 16px; border-radius: 20px; border: 1px solid #e5e7eb; background: white; color: #374151; cursor: pointer; font-size: 0.875rem; font-weight: 500; transition: all 0.2s;">모집중</button>
                 <button class="filter-btn" data-filter="모집마감" style="padding: 8px 16px; border-radius: 20px; border: 1px solid #e5e7eb; background: white; color: #374151; cursor: pointer; font-size: 0.875rem; font-weight: 500; transition: all 0.2s;">모집마감</button>
-                <button class="filter-btn" data-filter="모집예정" style="padding: 8px 16px; border-radius: 20px; border: 1px solid #e5e7eb; background: white; color: #374151; cursor: pointer; font-size: 0.875rem; font-weight: 500; transition: all 0.2s;">모집예정</button>
-                <button class="filter-btn" data-filter="마감" style="padding: 8px 16px; border-radius: 20px; border: 1px solid #e5e7eb; background: white; color: #374151; cursor: pointer; font-size: 0.875rem; font-weight: 500; transition: all 0.2s;">마감</button>
-                <button class="filter-btn" data-filter="폐강" style="padding: 8px 16px; border-radius: 20px; border: 1px solid #e5e7eb; background: white; color: #374151; cursor: pointer; font-size: 0.875rem; font-weight: 500; transition: all 0.2s;">폐강</button>
+                <button style="display: none;" class="filter-btn" data-filter="모집예정" style="padding: 8px 16px; border-radius: 20px; border: 1px solid #e5e7eb; background: white; color: #374151; cursor: pointer; font-size: 0.875rem; font-weight: 500; transition: all 0.2s;">모집예정</button>
+                <button style="display: none;" class="filter-btn" data-filter="마감" style="padding: 8px 16px; border-radius: 20px; border: 1px solid #e5e7eb; background: white; color: #374151; cursor: pointer; font-size: 0.875rem; font-weight: 500; transition: all 0.2s;">마감</button>
+                <button style="display: none;" class="filter-btn" data-filter="폐강" style="padding: 8px 16px; border-radius: 20px; border: 1px solid #e5e7eb; background: white; color: #374151; cursor: pointer; font-size: 0.875rem; font-weight: 500; transition: all 0.2s;">폐강</button>
             </div>
             
             <div class="education-grid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem;">
@@ -646,7 +646,7 @@ async function renderEducationPage() {
                 
                 <div style="padding: 1.5rem;">
                     <h3 style="font-size: 1.15rem; font-weight: 700; margin: 0 0 0.5rem 0; color: #1f2937;">${edu.Title}</h3>
-                    <p style="margin: 0 0 1rem 0; font-size: 0.875rem; color: #6b7280; line-height: 1.5; height: 2.6rem; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">
+                    <p style="margin: 0 0 1rem 0; font-size: 0.875rem; color: #6b7280; line-height: 1.5; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">
                         ${edu.Description || ''}
                     </p>
                     <div style="font-size: 0.85rem; color: #6b7280;">
@@ -717,7 +717,9 @@ async function renderEducationPage() {
             }
             
             .education-card > div:first-child {
-                height: 150px !important;
+                width: 100% !important;
+                height: auto !important;
+                aspect-ratio: 1 / 1 !important;
             }
             
             .education-card h3 {
@@ -862,12 +864,12 @@ async function renderApplyPage() {
             
             <!-- 신청 폼 유형 선택 -->
             <div style="display: flex; gap: 0.5rem; margin-bottom: 2rem; border-bottom: 1px solid #e5e7eb; padding-bottom: 1rem;">
-                <button type="button" class="form-type-btn active" data-type="general" style="padding: 10px 20px; border-radius: 8px; border: 1px solid #3b82f6; background: #3b82f6; color: white; cursor: pointer; font-weight: 600; transition: all 0.2s;">일반 신청</button>
-                <button type="button" class="form-type-btn" data-type="sbs" style="padding: 10px 20px; border-radius: 8px; border: 1px solid #e5e7eb; background: white; color: #374151; cursor: pointer; font-weight: 600; transition: all 0.2s;">SBS 계열사 직원 신청</button>
+            <button type="button" class="form-type-btn active" data-type="sbs" style="padding: 10px 20px; border-radius: 8px; border: 1px solid #3b82f6; background: #3b82f6; color: white; cursor: pointer; font-weight: 600; transition: all 0.2s;">SBS 계열사 직원 신청</button>
+            <button type="button" class="form-type-btn" data-type="general" style="padding: 10px 20px; border-radius: 8px; border: 1px solid #e5e7eb; background: white; color: #374151; cursor: pointer; font-weight: 600; transition: all 0.2s;">일반 신청</button>
             </div>
 
             <form id="apply-form" style="max-width: 600px;">
-                <input type="hidden" id="apply-form-type" value="general">
+                <input type="hidden" id="apply-form-type" value="sbs">
                 
                 <div style="margin-bottom: 1.5rem;">
                     <label class="form-label">이름 *</label>
@@ -1126,6 +1128,12 @@ function setupApplyForm() {
                 }
             });
         });
+
+        // 초기 상태 설정을 위해 현재 active인 버튼의 클릭 이벤트 실행
+        const activeTypeBtn = document.querySelector('.form-type-btn.active');
+        if (activeTypeBtn) {
+            activeTypeBtn.click();
+        }
         // -----------------------
 
         // 과정 선택 시 회차 목록 동적 업데이트 추가
