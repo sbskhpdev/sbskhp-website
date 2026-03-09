@@ -614,8 +614,11 @@ async function renderEducationPage() {
 
     let content = `
         <div class="content-card">
-            <h1 style="font-size: 1.875rem; font-weight: bold; color: #1f2937; margin-bottom: 1.5rem;">AI 교육 정보</h1>
-            <p style="color: #6b7280; margin-bottom: 2rem;">최신 AI 기술을 배울 수 있는 다양한 교육 과정을 제공합니다.</p>
+            <h1 style="font-size: 1.875rem; font-weight: bold; color: #1f2937; margin-bottom: 1.5rem;">SBS 임직원 AI리터러시 교육</h1>
+            <p style="color: #6b7280; margin-bottom: 2rem;">
+            SBS 임직원들의 AI기초역량 향상을 위한 교육과정입니다. 각 회차별 1회씩 중복 신청 가능합니다.<br>
+            영상 기초교육과정과 심화 교육과정은 연결된 과정이니 가급적 기초 교육과 심화 교육을 함께 신청해주시기 바랍니다.
+            </p>
             
             <!-- 필터 버튼 -->
             <div class="filter-buttons" style="display: flex; gap: 1rem; margin-bottom: 2rem; flex-wrap: wrap;">
