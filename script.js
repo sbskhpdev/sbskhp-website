@@ -943,7 +943,7 @@ async function renderApplyPage() {
                 
                 <div style="margin-bottom: 2rem; padding: 1rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;">
                     <p style="margin: 0; font-size: 14px; color: #6b7280; line-height: 1.5;">
-                        <strong style="color: #374151;">안내사항:</strong> 일부 교육은 고용노동부 협약 사업으로 고용보험 가입여부 확인을 위해 주민등록번호를 요청할 수 있습니다.
+                        <strong style="color: #374151;">안내사항:</strong> 본 교육은 고용노동부 K-하이테크플랫폼 사업의 일환으로, 고용보험 가입여부 확인을 위해 주민등록번호 제공이 필수입니다.
                     </p>
                 </div>
                 
@@ -1670,7 +1670,7 @@ function renderPrivacyPage() {
                 <h3 style="font-size: 1.15rem; font-weight: 700; margin-top: 1.5rem; margin-bottom: 0.5rem;">1. 수집하는 개인정보 항목</h3>
                 <p>운영자는 교육 신청 및 상담을 위해 아래와 같은 개인정보를 수집하고 있습니다.</p>
                 <ul style="margin-bottom: 1rem; padding-left: 1.5rem;">
-                    <li>필수항목: 이름, 이메일, 연락처, 희망 교육 과정, 직군/직급</li>
+                    <li>필수항목: 이름, 이메일, 연락처, 주민등록번호, 희망 교육 과정, 직군/직급</li>
                     <li>선택항목: 재직여부, 회사명</li>
                 </ul>
 
@@ -1681,6 +1681,7 @@ function renderPrivacyPage() {
                     <li>교육 관련 안내 사항 전달 (이메일, 문자 등)</li>
                     <li>신규 교육 과정 안내 및 만족도 조사</li>
                     <li>고용노동부 등 관계 기관의 훈련생 관리 및 보고</li>
+                    <li>교육생 HRD-Net 수강 등록</li>
                 </ul>
 
                 <h3 style="font-size: 1.15rem; font-weight: 700; margin-top: 1.5rem; margin-bottom: 0.5rem;">3. 개인정보의 보유 및 이용 기간</h3>
