@@ -677,8 +677,8 @@ async function renderEducationPage() {
             <div class="filter-buttons" style="display: flex; gap: 1rem; margin-bottom: 2rem; flex-wrap: wrap;">
                 <button class="filter-btn active" data-filter="all" style="padding: 8px 16px; border-radius: 20px; border: 1px solid #e5e7eb; background: #3b82f6; color: white; cursor: pointer; font-size: 0.875rem; font-weight: 500; transition: all 0.2s;">전체</button>
                 <button class="filter-btn" data-filter="모집중" style="padding: 8px 16px; border-radius: 20px; border: 1px solid #e5e7eb; background: white; color: #374151; cursor: pointer; font-size: 0.875rem; font-weight: 500; transition: all 0.2s;">모집중</button>
-                <button class="filter-btn" data-filter="모집마감" style="padding: 8px 16px; border-radius: 20px; border: 1px solid #e5e7eb; background: white; color: #374151; cursor: pointer; font-size: 0.875rem; font-weight: 500; transition: all 0.2s;">모집마감</button>
-                <button style="display: none;" class="filter-btn" data-filter="모집예정" style="padding: 8px 16px; border-radius: 20px; border: 1px solid #e5e7eb; background: white; color: #374151; cursor: pointer; font-size: 0.875rem; font-weight: 500; transition: all 0.2s;">모집예정</button>
+                <button style="display: none;" class="filter-btn" data-filter="모집마감" style="padding: 8px 16px; border-radius: 20px; border: 1px solid #e5e7eb; background: white; color: #374151; cursor: pointer; font-size: 0.875rem; font-weight: 500; transition: all 0.2s;">모집마감</button>
+                <button class="filter-btn" data-filter="모집예정" style="padding: 8px 16px; border-radius: 20px; border: 1px solid #e5e7eb; background: white; color: #374151; cursor: pointer; font-size: 0.875rem; font-weight: 500; transition: all 0.2s;">모집예정</button>
                 <button style="display: none;" class="filter-btn" data-filter="마감" style="padding: 8px 16px; border-radius: 20px; border: 1px solid #e5e7eb; background: white; color: #374151; cursor: pointer; font-size: 0.875rem; font-weight: 500; transition: all 0.2s;">마감</button>
                 <button style="display: none;" class="filter-btn" data-filter="폐강" style="padding: 8px 16px; border-radius: 20px; border: 1px solid #e5e7eb; background: white; color: #374151; cursor: pointer; font-size: 0.875rem; font-weight: 500; transition: all 0.2s;">폐강</button>
             </div>
@@ -916,6 +916,11 @@ async function renderApplyPage() {
     );
     const pageInfo = await getPageInfo('apply');
 
+    // 신청 안내 팝업 스크립트 추가
+    setTimeout(() => {
+        showApplyNotice();
+    }, 300);
+
     return `
         <div class="content-card">
             <h1 style="font-size: 1.875rem; font-weight: bold; color: #1f2937; margin-bottom: 1.5rem;">${pageInfo.title}</h1>
@@ -983,8 +988,8 @@ async function renderApplyPage() {
                 </div>
                 
                 <div style="margin-bottom: 1.5rem;">
-                    <label class="form-label">직군/직급</label>
-                    <input type="text" id="apply-position" class="form-input" placeholder="예: 개발자/주임, 마케터/팀장, 학생 등" required>
+                    <label class="form-label">부서/직급</label>
+                    <input type="text" id="apply-position" class="form-input" placeholder="" required>
                 </div>
                 
                 <div style="margin-bottom: 2rem;">
@@ -1803,5 +1808,55 @@ function closePrivacyModal() {
     if (modal) {
         modal.classList.remove('active');
         setTimeout(() => modal.remove(), 300);
+    }
+}
+
+// 교육 신청 안내 팝업 열기
+function showApplyNotice() {
+    const noticeId = 'apply-notice-popup';
+    if (document.getElementById(noticeId)) return;
+
+    const modalHTML = `
+        <div id="${noticeId}" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; z-index: 2000; padding: 1.5rem;">
+            <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.4); backdrop-filter: blur(2px);" onclick="closeApplyNotice()"></div>
+            <div style="position: relative; background: white; border-radius: 16px; width: 100%; max-width: 450px; overflow: hidden; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); animation: popupFadeIn 0.3s ease-out;">
+                <div style="padding: 2.5rem 1.5rem 1.5rem;">
+                    <div style="width: 56px; height: 56px; background: #fffbeb; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem;">
+                        <svg style="width: 28px; height: 28px; color: #f59e0b;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </div>
+                    <h3 style="font-size: 1.25rem; font-weight: 700; color: #111827; text-align: center; margin-bottom: 0.75rem;">교육 신청 안내</h3>
+                    <div style="color: #4b5563; line-height: 1.7; font-size: 1rem; text-align: center; padding: 0 1rem;">
+                        <p style="margin-bottom: 0.75rem;">교육 신청은 일정을 충분히 고려하여 신청해 주시기 바랍니다.</p>
+                        <p style="margin: 0; font-weight: 600; color: #1f2937;">모든 교육 과정은 <span style="color: #ef4444; font-weight: 700;">선착순</span>으로 마감됩니다.</p>
+                    </div>
+                </div>
+                <div style="padding: 1rem 1.5rem 2rem; display: flex; justify-content: center;">
+                    <button onclick="closeApplyNotice()" style="width: 100%; max-width: 200px; background: #3b82f6; color: white; border: none; padding: 0.875rem; border-radius: 10px; font-weight: 600; cursor: pointer; transition: all 0.2s; font-size: 0.95rem; box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.3);" onmouseover="this.style.background='#2563eb'" onmouseout="this.style.background='#3b82f6'">
+                        확인했습니다
+                    </button>
+                </div>
+            </div>
+        </div>
+        <style>
+            @keyframes popupFadeIn {
+                from { opacity: 0; transform: translateY(10px) scale(0.95); }
+                to { opacity: 1; transform: translateY(0) scale(1); }
+            }
+        </style>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    // 스크롤 방지
+    document.body.style.overflow = 'hidden';
+}
+
+// 교육 신청 안내 팝업 닫기
+function closeApplyNotice() {
+    const notice = document.getElementById('apply-notice-popup');
+    if (notice) {
+        notice.remove();
+        document.body.style.overflow = '';
     }
 }
