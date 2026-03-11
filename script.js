@@ -143,7 +143,17 @@ function getGroupedEducationData(data) {
     data.forEach(item => {
         if (!groups[item.Title]) {
             groups[item.Title] = {
-                ...item,
+                id: item.id,
+                Title: item.Title,
+                Category: item.Category,
+                Description: item.Description,
+                Benefits: item.Benefits,
+                Curriculum: item.Curriculum,
+                Instructor: item.Instructor,
+                Requirements: item.Requirements,
+                Price: item.Price,
+                Location: item.Location,
+                Image: item.Image,
                 rounds: []
             };
         }
@@ -152,7 +162,7 @@ function getGroupedEducationData(data) {
             round: item['회차'],
             startDate: item['Start Date'],
             endDate: item['End Date'],
-            status: item.Status,
+            status: item.Status || '마감', // 상태값이 없으면 기본 마감 처리
             eventId: item['Event ID']
         });
     });
@@ -160,6 +170,8 @@ function getGroupedEducationData(data) {
     // 각 그룹의 대표 상태 결정 (모집중이 하나라도 있으면 모집중, 아니면 가장 긍정적인 상태 순)
     return Object.values(groups).map(group => {
         const statuses = group.rounds.map(r => r.status);
+        console.log(`[Group: ${group.Title}] Rounds statuses:`, statuses);
+        
         let finalStatus = '마감';
         
         if (statuses.includes('모집중')) finalStatus = '모집중';
@@ -1596,10 +1608,12 @@ async function openEducationModal(educationId) {
                                         <span style="font-size: 0.75rem; font-weight: 600; color: ${getStatusColor(r.status)};">
                                             ${r.status}
                                         </span>
-                                        ${(r.status === '모집중') ? `
+                                        ${(r.status === '모집중' || r.status === '모집예정') ? `
                                             <button onclick="applyEducation('${r.id}')" style="background: #3b82f6; color: white; border: none; padding: 0.4rem 0.8rem; border-radius: 4px; font-size: 0.75rem; cursor: pointer;">신청</button>
                                         ` : `
-                                            <button disabled style="background: #e5e7eb; color: #9ca3af; border: none; padding: 0.4rem 0.8rem; border-radius: 4px; font-size: 0.75rem; cursor: not-allowed;">불가</button>
+                                            <button disabled style="background: #e5e7eb; color: #9ca3af; border: none; padding: 0.4rem 0.8rem; border-radius: 4px; font-size: 0.75rem; cursor: not-allowed;">
+                                                ${r.status === '폐강' ? '폐강' : '마감'}
+                                            </button>
                                         `}
                                     </div>
                                 </div>
