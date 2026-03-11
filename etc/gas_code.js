@@ -44,6 +44,12 @@ function doGet(e) {
       return createJsonResponse(found);
     }
     
+    // [추가] 캘린더 동기화 요청 처리 (관리자 권한으로 실행됨)
+    if (type === 'SyncCalendar') {
+      syncSheetToCalendarInternal();
+      return createJsonResponse({ success: true, message: 'Calendar sync prioritized' });
+    }
+    
     let sheet = getSheetCaseInsensitive(ss, type);
     
     if (!sheet) return createJsonResponse({ error: `Sheet named '${type}' not found.` });
@@ -214,7 +220,7 @@ function sendApplicationEmail(info) {
           <strong>신청 과정:</strong> ${course}<br>
           <strong>현재 상태:</strong> 신청 대기 (담당자 확인 중)
         </div>
-        <p>담당자가 기재해주신 정보를 바탕으로 확인 후, 2~3일 이내에 최종 승인 여부를 안내해 드릴 예정입니다.</p>
+        <p>담당자가 기재해주신 정보를 바탕으로 확인 후, 이메일을 통해 최종 승인 여부를 안내해 드릴 예정입니다.</p>
       `;
       break;
     case '승인':
@@ -226,7 +232,7 @@ function sendApplicationEmail(info) {
           <strong>과정명:</strong> ${course}<br>
           <strong>상태:</strong> 승인 완료
         </div>
-        <p>교육 장소 및 세부 준비물에 대해서는 추후 별도의 안내 문자를 드릴 예정입니다. 교육 당일 늦지 않게 참석 부탁드립니다.</p>
+        <p>교육 장소 및 세부 준비물에 대해서는 추후 별도의 안내 메일을 드릴 예정입니다. 교육 당일 늦지 않게 참석 부탁드립니다.</p>
       `;
       break;
     case '반려':
@@ -306,15 +312,61 @@ function onEditTrigger(e) {
 }
 
 /**
- * [관리용] 'Education' 시트의 데이터를 구글 캘린더와 동기화하는 함수
+ * [관리용] 'Education' 시트의 데이터를 구글 캘린더와 동기화하는 함수 (버튼용)
+ * 누가 버튼을 누르든 항상 '나(관리자)'의 권한으로 실행되는 웹 앱 URL을 호출합니다.
  */
 function syncSheetToCalendar() {
+  const ui = (function() { try { return SpreadsheetApp.getUi(); } catch(e) { return null; } })();
+  
+  try {
+    // 1. 직접 실행 시도
+    syncSheetToCalendarInternal();
+    if (ui) ui.alert("✅ 동기화가 완료되었습니다.");
+    
+  } catch (e) {
+    const errorMsg = e.toString();
+    // 2. 권한 부족(타 계정) 시 웹 앱 API 호출
+    if (errorMsg.includes("허용되지 않는 작업") || errorMsg.includes("Permission denied") || errorMsg.includes("접근 권한")) {
+      try {
+        const url = ScriptApp.getService().getUrl();
+        if (!url) {
+          if (ui) ui.alert("❌ 웹 앱이 배포되지 않았습니다. [배포 > 새 배포]를 먼저 완료해 주세요.");
+          return;
+        }
+
+        // 관리자 권한으로 실행되는 본인의 Web App 호출
+        const response = UrlFetchApp.fetch(url + "?type=SyncCalendar", {
+          muteHttpExceptions: true,
+          followRedirects: true
+        });
+        
+        console.log("자동 동기화 요청 결과:", response.getContentText());
+        
+        if (ui) {
+          ui.alert("✅ 관리자 계정의 권한으로 동기화를 요청했습니다.\n잠시 후(약 10~30초 뒤) 캘린더를 확인해 보세요.");
+        }
+      } catch (fetchError) {
+        console.error("API 호출 실패:", fetchError);
+        if (ui) ui.alert("❌ API 호출 중 오류가 발생했습니다: " + fetchError.toString());
+      }
+    } else {
+      console.error("동기화 로직 오류:", e);
+      if (ui) ui.alert("❌ 오류 발생: " + e.toString());
+    }
+  }
+}
+
+/**
+ * 실제 동기화 로직을 수행하는 내부 함수
+ */
+function syncSheetToCalendarInternal() {
   const calendarId = "sbskhpdev@gmail.com";
   const calendar = CalendarApp.getCalendarById(calendarId);
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Education");
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName("Education");
   
   if (!sheet) {
-    SpreadsheetApp.getUi().alert("❌ 'Education' 시트 탭을 찾을 수 없습니다.");
+    console.error("❌ 'Education' 시트 탭을 찾을 수 없습니다.");
     return;
   }
   
@@ -376,47 +428,61 @@ function syncSheetToCalendar() {
       location: location
     };
 
+    // [수정] 차단 방지를 위해 변경사항이 있을 때만 API 호출
+    let isChanged = false;
     if (event) {
-      // 기존 일정 수정
-      event.setTitle(fullTitle);
-      event.setDescription(description);
-      event.setLocation(location);
+      const oldTitle = event.getTitle();
+      const oldDesc = event.getDescription();
+      const oldLoc = event.getLocation();
       
-      if (isAllDay) {
-        // 종일 일정으로 업데이트 (종료일이 포함되도록 +1일 처리)
-        const end = new Date(endTime);
-        end.setDate(end.getDate() + 1);
-        event.setAllDayDates(startTime, end);
-      } else {
-        // 시간 지정 일정으로 업데이트
-        event.setTime(startTime, endTime);
+      if (oldTitle !== fullTitle || oldDesc !== (description || "") || oldLoc !== (location || "")) {
+        isChanged = true;
       }
     } else {
-      // 새 일정 생성
-      if (isAllDay) {
-        // 종료일이 포함되도록 +1일 처리
-        const end = new Date(endTime);
-        end.setDate(end.getDate() + 1);
-        event = calendar.createAllDayEvent(fullTitle, startTime, end, options);
-      } else {
-        event = calendar.createEvent(fullTitle, startTime, endTime, options);
-      }
-      // 생성된 ID를 시트에 기록
-      sheet.getRange(rowIndex + 2, idx.id + 1).setValue(event.getId());
+      isChanged = true;
     }
 
-    // 상태(Status)에 따른 색상 변경
-    // 구글 기본 색상 코드 적용 (PALE_GREEN, GRAY, PALE_BLUE 등)
-    if (status === "모집중") {
-      event.setColor(CalendarApp.EventColor.PALE_GREEN);
-    } else if (status === "마감" || status === "모집마감") {
-      event.setColor(CalendarApp.EventColor.GRAY);
-    } else if (status === "모집예정") {
-      event.setColor(CalendarApp.EventColor.PALE_BLUE);
-    } else if (status === "폐강") {
-      event.setColor(CalendarApp.EventColor.RED);
+    if (isChanged) {
+      if (event) {
+        // 기존 일정 수정
+        event.setTitle(fullTitle);
+        event.setDescription(description);
+        event.setLocation(location);
+        
+        if (isAllDay) {
+          const end = new Date(endTime);
+          end.setDate(end.getDate() + 1);
+          event.setAllDayDates(startTime, end);
+        } else {
+          event.setTime(startTime, endTime);
+        }
+      } else {
+        // 새 일정 생성
+        if (isAllDay) {
+          const end = new Date(endTime);
+          end.setDate(end.getDate() + 1);
+          event = calendar.createAllDayEvent(fullTitle, startTime, end, options);
+        } else {
+          event = calendar.createEvent(fullTitle, startTime, endTime, options);
+        }
+        sheet.getRange(rowIndex + 2, idx.id + 1).setValue(event.getId());
+      }
+
+      // 상태에 따른 색상 변경
+      if (status === "모집중") {
+        event.setColor(CalendarApp.EventColor.PALE_GREEN);
+      } else if (status === "마감" || status === "모집마감") {
+        event.setColor(CalendarApp.EventColor.GRAY);
+      } else if (status === "모집예정") {
+        event.setColor(CalendarApp.EventColor.PALE_BLUE);
+      } else if (status === "폐강") {
+        event.setColor(CalendarApp.EventColor.RED);
+      }
+      
+      // 구글 서버에 너무 잦은 요청을 보내지 않도록 짧은 대기 시간 추가 (0.5초)
+      Utilities.sleep(500);
     }
   });
   
-  SpreadsheetApp.getUi().alert("캘린더 동기화가 완료되었습니다!");
+  console.log("캘린더 동기화가 완료되었습니다.");
 }
