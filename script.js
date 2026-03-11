@@ -7,6 +7,7 @@ const API_URL = "https://script.google.com/macros/s/AKfycbwkBLDzJKbSWYDGv8EmcgpU
 let cachedEducationData = null;
 let cachedFaqData = null;
 let cachedCompanyData = null;
+let cachedPageSubtitleData = null;
 
 // 현재 활성 페이지 상태
 let currentPage = null;
@@ -135,6 +136,44 @@ async function getCompanyData() {
         console.error("계열사 데이터 로드 실패:", error);
         return [];
     }
+}
+
+// 페이지 타이틀 및 서브타이틀 데이터 가져오기
+async function getPageSubtitleData() {
+    if (cachedPageSubtitleData) return cachedPageSubtitleData;
+    try {
+        const response = await fetch(`${API_URL}?type=Page%20Subtitle`);
+        const data = await response.json();
+        if (Array.isArray(data)) {
+            cachedPageSubtitleData = data;
+            return cachedPageSubtitleData;
+        }
+        return [];
+    } catch (error) {
+        console.error("페이지 자막 데이터 로드 실패:", error);
+        return [];
+    }
+}
+
+// 특정 페이지의 타이틀과 서브타이틀 가져오기
+async function getPageInfo(pageName) {
+    const data = await getPageSubtitleData();
+    const pageMapping = {
+        'education': '교육 정보',
+        'schedule': '교육 일정',
+        'apply': '교육 신청',
+        'confirm': '신청 확인',
+        'faq': 'FAQ',
+        'contact': '오시는 길'
+    };
+    
+    const sheetPageName = pageMapping[pageName] || pageName;
+    const pageInfo = data.find(item => item.Page === sheetPageName);
+    
+    return {
+        title: pageInfo ? pageInfo.Title : sheetPageName,
+        subtitle: pageInfo ? pageInfo.Subtitle : ''
+    };
 }
 
 // 교육 데이터를 제목(Title) 기준으로 그룹화
@@ -338,7 +377,7 @@ async function loadPage(page) {
                 content = renderHomePage();
                 break;
             case 'schedule':
-                content = renderSchedulePage();
+                content = await renderSchedulePage();
                 break;
             case 'education':
                 content = await renderEducationPage();
@@ -347,13 +386,13 @@ async function loadPage(page) {
                 content = await renderApplyPage();
                 break;
             case 'confirm':
-                content = renderConfirmPage();
+                content = await renderConfirmPage();
                 break;
             case 'faq':
                 content = await renderFaqPage();
                 break;
             case 'contact':
-                content = renderContactPage();
+                content = await renderContactPage();
                 break;
             case 'privacy':
                 content = renderPrivacyPage();
@@ -576,15 +615,17 @@ function renderHomePage() {
 }
 
 // 교육 일정 페이지 렌더링
-function renderSchedulePage() {
+async function renderSchedulePage() {
     // 구글 캘린더 ID: sbskhpdev@gmail.com
     const calendarId = "sbskhpdev@gmail.com";
     const googleCalendarSrc = `https://calendar.google.com/calendar/embed?src=${encodeURIComponent(calendarId)}&ctz=Asia%2FSeoul&showTitle=0&showPrint=0&showTabs=1&showCalendars=0&showTz=0`;
     
+    const pageInfo = await getPageInfo('schedule');
+    
     return `
         <div class="content-card">
-            <h1 style="font-size: 1.875rem; font-weight: bold; color: #1f2937; margin-bottom: 1.5rem;">교육 일정</h1>
-            <!--<p style="color: #6b7280; margin-bottom: 1.5rem;">구글 캘린더를 통해 실시간으로 업데이트되는 교육 일정을 확인하세요.</p>-->
+            <h1 style="font-size: 1.875rem; font-weight: bold; color: #1f2937; margin-bottom: 1.5rem;">${pageInfo.title}</h1>
+            ${pageInfo.subtitle ? `<p style="color: #6b7280; margin-bottom: 1.5rem;">${pageInfo.subtitle}</p>` : ''}
             
             <div class="calendar-container">
                 <iframe 
@@ -623,13 +664,13 @@ function renderSchedulePage() {
 async function renderEducationPage() {
     const rawData = await getEducationData();
     const educationData = getGroupedEducationData(rawData);
+    const pageInfo = await getPageInfo('education');
 
     let content = `
         <div class="content-card">
-            <h1 style="font-size: 1.875rem; font-weight: bold; color: #1f2937; margin-bottom: 1.5rem;">SBS 임직원 AI리터러시 교육</h1>
+            <h1 style="font-size: 1.875rem; font-weight: bold; color: #1f2937; margin-bottom: 1.5rem;">${pageInfo.title}</h1>
             <p style="color: #6b7280; margin-bottom: 2rem;">
-            SBS 임직원들의 AI기초역량 향상을 위한 교육과정입니다.<br>
-            영상 기초교육과정과 심화 교육과정은 연결된 과정이니 가급적 기초 교육과 심화 교육을 함께 신청해주시기 바랍니다.
+            ${pageInfo.subtitle.replace(/\n/g, '<br>')}
             </p>
             
             <!-- 필터 버튼 -->
@@ -807,13 +848,15 @@ function getStatusColor(status) {
 }
 
 // 연락처 페이지 렌더링
-function renderContactPage() {
+async function renderContactPage() {
+    const pageInfo = await getPageInfo('contact');
     return `
         <div class="content-card">
+            <h1 style="font-size: 1.875rem; font-weight: bold; color: #1f2937; margin-bottom: 1.5rem;">${pageInfo.title}</h1>
+            ${pageInfo.subtitle ? `<p style="color: #6b7280; margin-bottom: 1.5rem;">${pageInfo.subtitle}</p>` : ''}
             
             <!-- 지도 섹션 -->
             <div style="margin-bottom: 1rem;">
-                <h2 style="font-size: 1.5rem; font-weight: 600; color: #1f2937; margin-bottom: 1rem;">오시는 길</h2>
                 <div style="border-radius: 12px; overflow: hidden; height: 400px; border: 1px solid #e2e8f0;">
                     <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3164.9023843214486!2d126.74436379999999!3d37.5102204!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x357b7d316991b561%3A0x7577edf74b7a0694!2z7Ju57Yiw7Jy17ZWp7IS87YSwIOuwjyDrtoDsspzsmIHsg4Eg7LKt64WE7JiY7Iig7J24IOyjvO2DnQ!5e0!3m2!1sko!2skr!4v1763616057176!5m2!1sko!2skr" 
                             style="width: 100%; height: 100%; border: 0;" 
@@ -871,11 +914,12 @@ async function renderApplyPage() {
     const groupedData = getGroupedEducationData(rawData).filter(group => 
         group.rounds.some(r => r.status === '모집중' || r.status === '모집예정')
     );
+    const pageInfo = await getPageInfo('apply');
 
     return `
         <div class="content-card">
-            <h1 style="font-size: 1.875rem; font-weight: bold; color: #1f2937; margin-bottom: 1.5rem;">교육 신청</h1>
-            <p style="color: #6b7280; margin-bottom: 1.5rem;">원하시는 교육 과정에 신청해주세요. 신청 완료 후 담당자가 연락드립니다.</p>
+            <h1 style="font-size: 1.875rem; font-weight: bold; color: #1f2937; margin-bottom: 1.5rem;">${pageInfo.title}</h1>
+            ${pageInfo.subtitle ? `<p style="color: #6b7280; margin-bottom: 1.5rem;">${pageInfo.subtitle}</p>` : ''}
             
             <!-- 신청 폼 유형 선택 -->
             <div style="display: flex; gap: 0.5rem; margin-bottom: 2rem; border-bottom: 1px solid #e5e7eb; padding-bottom: 1rem;">
@@ -970,11 +1014,12 @@ async function renderApplyPage() {
 }
 
 // 신청 확인 페이지 렌더링
-function renderConfirmPage() {
+async function renderConfirmPage() {
+    const pageInfo = await getPageInfo('confirm');
     return `
         <div class="content-card">
-            <h1 style="font-size: 1.875rem; font-weight: bold; color: #1f2937; margin-bottom: 1.5rem;">신청 확인</h1>
-            <p style="color: #6b7280; margin-bottom: 1.5rem;">이름과 이메일을 입력하여 신청 내역을 확인하세요.</p>
+            <h1 style="font-size: 1.875rem; font-weight: bold; color: #1f2937; margin-bottom: 1.5rem;">${pageInfo.title}</h1>
+            <p style="color: #6b7280; margin-bottom: 1.5rem;">${pageInfo.subtitle}</p>
             
             <form id="confirm-form" style="max-width: 448px;">
                 <div style="margin-bottom: 1.5rem;">
@@ -1021,11 +1066,12 @@ async function getFaqData() {
 // FAQ 페이지 렌더링
 async function renderFaqPage() {
     const faqData = await getFaqData();
+    const pageInfo = await getPageInfo('faq');
 
     let content = `
         <div class="content-card">
-            <h1 style="font-size: 1.875rem; font-weight: bold; color: #1f2937; margin-bottom: 1.5rem;">자주 묻는 질문</h1>
-            <p style="color: #6b7280; margin-bottom: 1.5rem;">궁금한 사항을 빠르게 확인해보세요.</p>
+            <h1 style="font-size: 1.875rem; font-weight: bold; color: #1f2937; margin-bottom: 1.5rem;">${pageInfo.title}</h1>
+            <p style="color: #6b7280; margin-bottom: 1.5rem;">${pageInfo.subtitle}</p>
     `;
     
     if (faqData.length === 0) {
