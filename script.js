@@ -910,9 +910,9 @@ async function renderContactPage() {
 // 교육 신청 페이지 렌더링
 async function renderApplyPage() {
     const rawData = await getEducationData();
-    // 모집중이거나 준비중인 회차가 하나라도 있는 과정들만 필터링
+    // 모집중인 회차가 하나라도 있는 과정들만 필터링 (모집예정 제외)
     const groupedData = getGroupedEducationData(rawData).filter(group => 
-        group.rounds.some(r => r.status === '모집중' || r.status === '모집예정')
+        group.rounds.some(r => r.status === '모집중')
     );
     const pageInfo = await getPageInfo('apply');
 
@@ -1217,16 +1217,13 @@ function setupApplyForm() {
                 }
 
                 const data = await getEducationData();
-                const rounds = data.filter(edu => edu.Title === selectedTitle && (edu.Status === '모집중' || edu.Status === '모집예정'));
+                const rounds = data.filter(edu => edu.Title === selectedTitle && edu.Status === '모집중');
                 
                 if (rounds.length > 0) {
                     rounds.forEach(r => {
                         const option = document.createElement('option');
                         option.value = r.id; 
                         option.textContent = `${r['회차']}회차 (${formatDate(r['Start Date'])} ~ ${formatDate(r['End Date'])})`;
-                        if (r.Status === '모집예정') {
-                            option.textContent += ' [모집예정]';
-                        }
                         option.setAttribute('data-round', r['회차']);
                         option.setAttribute('data-start', r['Start Date']);
                         option.setAttribute('data-end', r['End Date']);
@@ -1659,11 +1656,11 @@ async function openEducationModal(educationId) {
                                         <span style="font-size: 0.75rem; font-weight: 600; color: ${getStatusColor(r.status)};">
                                             ${r.status}
                                         </span>
-                                        ${(r.status === '모집중' || r.status === '모집예정') ? `
+                                        ${r.status === '모집중' ? `
                                             <button onclick="applyEducation('${r.id}')" style="background: #3b82f6; color: white; border: none; padding: 0.4rem 0.8rem; border-radius: 4px; font-size: 0.75rem; cursor: pointer;">신청</button>
                                         ` : `
                                             <button disabled style="background: #e5e7eb; color: #9ca3af; border: none; padding: 0.4rem 0.8rem; border-radius: 4px; font-size: 0.75rem; cursor: not-allowed;">
-                                                ${r.status === '폐강' ? '폐강' : '마감'}
+                                                ${r.status === '모집예정' ? '대기' : (r.status === '폐강' ? '폐강' : '마감')}
                                             </button>
                                         `}
                                     </div>
