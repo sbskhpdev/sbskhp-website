@@ -31,11 +31,13 @@ function formatDate(dateVal) {
     }
 }
 
-// 텍스트 포맷팅 (Markdown 스타일 **볼드** 처리)
+// 텍스트 포맷팅 (Markdown 스타일 **볼드** 및 줄바꿈 처리)
 function parseMarkdown(text) {
     if (!text) return '';
+    // 줄바꿈 처리 (\n -> <br>)
+    let formattedText = String(text).replace(/\n/g, '<br>');
     // **텍스트** -> <strong>텍스트</strong>
-    return String(text).replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    return formattedText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
 }
 
 // 구글 드라이브 이미지 주소를 직접 링크 주소로 변환
@@ -625,7 +627,7 @@ async function renderSchedulePage() {
     return `
         <div class="content-card">
             <h1 style="font-size: 1.875rem; font-weight: bold; color: #1f2937; margin-bottom: 1.5rem;">${pageInfo.title}</h1>
-            ${pageInfo.subtitle ? `<p style="color: #6b7280; margin-bottom: 1.5rem;">${pageInfo.subtitle}</p>` : ''}
+            ${pageInfo.subtitle ? `<p style="color: #6b7280; margin-bottom: 1.5rem;">${parseMarkdown(pageInfo.subtitle)}</p>` : ''}
             
             <div class="calendar-container">
                 <iframe 
@@ -670,7 +672,7 @@ async function renderEducationPage() {
         <div class="content-card">
             <h1 style="font-size: 1.875rem; font-weight: bold; color: #1f2937; margin-bottom: 1.5rem;">${pageInfo.title}</h1>
             <p style="color: #6b7280; margin-bottom: 2rem;">
-            ${pageInfo.subtitle.replace(/\n/g, '<br>')}
+            ${parseMarkdown(pageInfo.subtitle)}
             </p>
             
             <!-- 필터 버튼 -->
@@ -853,7 +855,7 @@ async function renderContactPage() {
     return `
         <div class="content-card">
             <h1 style="font-size: 1.875rem; font-weight: bold; color: #1f2937; margin-bottom: 1.5rem;">${pageInfo.title}</h1>
-            ${pageInfo.subtitle ? `<p style="color: #6b7280; margin-bottom: 1.5rem;">${pageInfo.subtitle}</p>` : ''}
+            ${pageInfo.subtitle ? `<p style="color: #6b7280; margin-bottom: 1.5rem;">${parseMarkdown(pageInfo.subtitle)}</p>` : ''}
             
             <!-- 지도 섹션 -->
             <div style="margin-bottom: 1rem;">
@@ -924,7 +926,7 @@ async function renderApplyPage() {
     return `
         <div class="content-card">
             <h1 style="font-size: 1.875rem; font-weight: bold; color: #1f2937; margin-bottom: 1.5rem;">${pageInfo.title}</h1>
-            ${pageInfo.subtitle ? `<p style="color: #6b7280; margin-bottom: 1.5rem;">${pageInfo.subtitle}</p>` : ''}
+            ${pageInfo.subtitle ? `<p style="color: #6b7280; margin-bottom: 1.5rem;">${parseMarkdown(pageInfo.subtitle)}</p>` : ''}
             
             <!-- 신청 폼 유형 선택 -->
             <div style="display: flex; gap: 0.5rem; margin-bottom: 2rem; border-bottom: 1px solid #e5e7eb; padding-bottom: 1rem;">
