@@ -268,7 +268,7 @@ function sendApplicationEmail(info) {
       `;
       break;
     case '승인':
-      subject = `[SBS A&T] 축하합니다! 교육 신청이 승인되었습니다 - ${course}`;
+      subject = `[SBS A&T] 교육 신청이 승인되었습니다 - ${course}`;
       body = `
         <div ${headerStyle}>안녕하세요, ${name}님.</div>
         <p>신청하신 과정이 최종 <strong>승인</strong>되었습니다.</p>
@@ -290,6 +290,7 @@ function sendApplicationEmail(info) {
         <div ${boxStyle}>
           <strong>과정명:</strong> ${course}<br>
           <strong>반려 사유:</strong> ${reason || '정원 초과 또는 요건 미충족'}
+          <strong>문의:</strong> haba98@sbs.co.kr
         </div>
         <p>관련하여 문의사항이 있으시면 haba98@sbs.co.kr로 연락 주시기 바랍니다.</p>
       `;
@@ -310,13 +311,11 @@ function sendApplicationEmail(info) {
       subject = `[SBS A&T] 교육 신청 승인 대기 안내 - ${course}`;
       body = `
         <div ${headerStyle}>안녕하세요, ${name}님.</div>
-        <p>사용자님의 교육 신청이 <strong>승인 대기</strong> 상태로 전환되었습니다.</p>
+        <p>교육 신청이 <strong>승인 대기</strong> 상태로 전환되었습니다.</p>
         <div ${boxStyle}>
           <strong>과정명:</strong> ${course}<br>
-          <strong>교육 일정:</strong> ${eduInfo.date}<br>
-          <strong>교육 시간:</strong> 10:00 - 18:00<br>
-          <strong>교육 장소:</strong> ${eduInfo.location}<br>
-          <strong>현재 상태:</strong> 승인 대기 (결원 발생 시 순차적 승인 예정)
+          <strong>승인 대기:</strong> 정원 외 신청으로 취소 또는 결원 발생 시 순차적으로 승인 전환<br>
+          <strong>문의:</strong> haba98@sbs.co.kr
         </div>
         <p>본 과정은 선착순 정원 외 신청으로, 기존 승인 인원 중 <strong>결원 발생 시</strong> 순차적으로 최종 승인 처리될 예정입니다.</p>
         <p>최종 승인 여부는 추후 다시 안내해 드리겠습니다. 기다려 주셔서 감사합니다.</p>
