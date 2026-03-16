@@ -204,6 +204,48 @@ function doPost(e) {
  */
 function sendApplicationEmail(info) {
   const { name, email, course, status, reason } = info;
+  
+  // [추가] Education 시트에서 교육 정보 검색
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const eduSheet = ss.getSheetByName("Education");
+  let eduInfo = { date: "추후 안내", location: "추후 안내" };
+
+  if (eduSheet) {
+    const eduData = eduSheet.getDataRange().getValues();
+    const eduHeaders = eduData[0];
+    const titleIdx = eduHeaders.indexOf("Title");
+    const roundIdx = eduHeaders.indexOf("회차"); // Round -> 회차로 수정
+    const startIdx = eduHeaders.indexOf("Start Date");
+    const endIdx = eduHeaders.indexOf("End Date");
+    const locIdx = eduHeaders.indexOf("Location");
+
+    // 신청 데이터 예시: "AI영상제작 기초 (1회차)"
+    // 시트 데이터 예시: Title="AI영상제작 기초", 회차="1"
+    const row = eduData.find(r => {
+      const sheetTitle = String(r[titleIdx]).trim();
+      let sheetRound = String(r[roundIdx]).trim();
+      
+      // 혹시 시트의 "회차" 칸에 이미 "1회차"라고 적혀있을 경우를 대비해 숫자만 추출 시도
+      const roundNumber = sheetRound.replace(/[^0-9]/g, ''); 
+      const combinedTitle = `${sheetTitle} (${roundNumber || sheetRound}회차)`;
+      
+      return combinedTitle === course;
+    });
+
+    if (row) {
+      const start = row[startIdx];
+      const end = row[endIdx];
+      const loc = row[locIdx];
+      
+      const formatDate = (d) => (d instanceof Date) ? Utilities.formatDate(d, "GMT+9", "yyyy.MM.dd") : d;
+      
+      if (start) {
+        eduInfo.date = formatDate(start) + (end ? " ~ " + formatDate(end) : "");
+      }
+      if (loc) eduInfo.location = loc;
+    }
+  }
+
   let subject = `[SBS A&T] 교육 신청 ${status} 안내 - ${course}`;
   let body = "";
 
@@ -218,6 +260,8 @@ function sendApplicationEmail(info) {
         <p>SBS A&T Hightech Platform 교육 신청이 정상적으로 접수되었습니다.</p>
         <div ${boxStyle}>
           <strong>신청 과정:</strong> ${course}<br>
+          <strong>교육 일정:</strong> ${eduInfo.date}<br>
+          <strong>교육 장소:</strong> ${eduInfo.location}<br>
           <strong>현재 상태:</strong> 신청 대기 (담당자 확인 중)
         </div>
         <p>담당자가 기재해주신 정보를 바탕으로 확인 후, 이메일을 통해 최종 승인 여부를 안내해 드릴 예정입니다.</p>
@@ -227,12 +271,15 @@ function sendApplicationEmail(info) {
       subject = `[SBS A&T] 축하합니다! 교육 신청이 승인되었습니다 - ${course}`;
       body = `
         <div ${headerStyle}>안녕하세요, ${name}님.</div>
-        <p>과정 참여 신청이 최종 <strong>승인</strong>되었습니다.</p>
+        <p>신청하신 과정이 최종 <strong>승인</strong>되었습니다.</p>
         <div ${boxStyle}>
           <strong>과정명:</strong> ${course}<br>
+          <strong>교육 일정:</strong> ${eduInfo.date}<br>
+          <strong>교육 시간:</strong> 10:00 - 18:00<br>
+          <strong>교육 장소:</strong> ${eduInfo.location}<br>
           <strong>상태:</strong> 승인 완료
         </div>
-        <p>교육 장소 및 세부 준비물에 대해서는 추후 별도의 안내 메일을 드릴 예정입니다. 교육 당일 늦지 않게 참석 부탁드립니다.</p>
+        <p>자세한 교육 참석 안내 사항은 추후 별도의 안내 메일을 드릴 예정입니다.<br> 신청하신 교육 참석이 어려울 시 haba98@sbs.co.kr로 즉시 알려주시길 바랍니다.</p>
       `;
       break;
     case '반려':
@@ -257,6 +304,22 @@ function sendApplicationEmail(info) {
           <strong>취소 사유:</strong> ${reason || '사용자 요청'}
         </div>
         <p>다음에 더 좋은 기회로 만나 뵙기를 바랍니다.</p>
+      `;
+      break;
+    case '승인 대기':
+      subject = `[SBS A&T] 교육 신청 승인 대기 안내 - ${course}`;
+      body = `
+        <div ${headerStyle}>안녕하세요, ${name}님.</div>
+        <p>사용자님의 교육 신청이 <strong>승인 대기</strong> 상태로 전환되었습니다.</p>
+        <div ${boxStyle}>
+          <strong>과정명:</strong> ${course}<br>
+          <strong>교육 일정:</strong> ${eduInfo.date}<br>
+          <strong>교육 시간:</strong> 10:00 - 18:00<br>
+          <strong>교육 장소:</strong> ${eduInfo.location}<br>
+          <strong>현재 상태:</strong> 승인 대기 (결원 발생 시 순차적 승인 예정)
+        </div>
+        <p>본 과정은 선착순 정원 외 신청으로, 기존 승인 인원 중 <strong>결원 발생 시</strong> 순차적으로 최종 승인 처리될 예정입니다.</p>
+        <p>최종 승인 여부는 추후 다시 안내해 드리겠습니다. 기다려 주셔서 감사합니다.</p>
       `;
       break;
   }

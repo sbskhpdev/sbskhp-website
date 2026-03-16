@@ -1827,7 +1827,7 @@ function showApplyNotice() {
                     </div>
                     <h3 style="font-size: 1.25rem; font-weight: 700; color: #111827; text-align: center; margin-bottom: 0.75rem;">교육 신청 안내</h3>
                     <div style="color: #4b5563; line-height: 1.7; font-size: 1rem; text-align: center; padding: 0 1rem;">
-                        <p style="margin-bottom: 0.75rem;">교육 신청은 일정을 충분히 고려하여 신청해 주시기 바랍니다.</p>
+                        <p style="margin-bottom: 0.75rem;">교육 신청은 일정을 충분히 고려하여<br>신청해 주시기 바랍니다.</p>
                         <p style="margin: 0; font-weight: 600; color: #1f2937;">모든 교육 과정은 <span style="color: #ef4444; font-weight: 700;">선착순</span>으로 마감됩니다.</p>
                     </div>
                 </div>
