@@ -3,6 +3,12 @@
 // 구글 앱스크립트 API URL
 const API_URL = "https://script.google.com/macros/s/AKfycbwkBLDzJKbSWYDGv8EmcgpUPRuVHh3ueYumaPBHy5OzTe42idUniJdUvJKsm0z4JwyW/exec";
 
+// 설정 (기능 On/Off)
+const CONFIG = {
+    SHOW_PRIVATE_NOTICE: true, // 비공개 모드 안내 플로팅 버튼 활성화 여부
+    PUBLIC_SITE_URL: "https://sbsantcl.co.kr" // 공개 사이트 주소
+};
+
 // 전역 데이터 캐시
 let cachedEducationData = null;
 let cachedFaqData = null;
@@ -111,10 +117,10 @@ async function getEducationData() {
         const response = await fetch(`${API_URL}?type=Education`);
         const data = await response.json();
         
-        // URL 파라미터 및 해시 확인 (비공개 링크 접속용)
+        // URL 파라미터 확인 (비공개 모드 여부 확인)
         const urlParams = new URLSearchParams(window.location.search);
         const forceEduId = urlParams.get('eduId');
-        const isPrivateMode = window.location.hash === '#apply-private';
+        const isPrivateMode = urlParams.get('mode') === 'private';
 
         // ID가 문자열로 올 수 있으므로 숫자로 변환 처리 (시트에서 숫자도 문자열로 넘어오는 경우가 많음)
         cachedEducationData = data.filter(item => {
@@ -122,7 +128,7 @@ async function getEducationData() {
             const val = String(item['비공개'] || '').trim().toUpperCase();
             const isPrivate = val === 'TRUE' || item['비공개'] === true;
             
-            // 1. 비공개 모드(#apply-private)인 경우: 비공개 항목만 노출
+            // 1. 비공개 모드(?mode=private)인 경우: 비공개 항목만 노출
             if (isPrivateMode) return isPrivate;
             
             // 2. 일반 모드인 경우: 공개 항목만 노출 (단, 특정 ID 강제 노출은 유지)
@@ -255,6 +261,12 @@ document.addEventListener('DOMContentLoaded', function() {
 function initializeApp() {
     console.log('SBSKHP 교육 서비스 플랫폼 초기화');
     
+    // [추가] 비공개 모드 진입 시 알림 플로팅 버튼 표시
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('mode') === 'private' && CONFIG.SHOW_PRIVATE_NOTICE) {
+        showPrivateModeFloatingButton();
+    }
+    
     // 브라우저 뒤로/앞으로 버튼 처리 (통합된 라우터 사용)
     window.addEventListener('popstate', handleRouter);
     
@@ -346,18 +358,14 @@ function getURLParams() {
     // 1. 쿼리 파라미터 'page' 우선, 없으면 Hash, 그것도 없으면 'home'
     let page = urlParams.get('page') || hash || 'home';
     
-    // apply-private 해시 처리
-    if (hash === 'apply-private') {
-        page = 'apply';
-    }
-    
     if (!isValidPage(page)) {
         page = 'home';
     }
 
     return {
         page: page,
-        detail: urlParams.get('detail')
+        detail: urlParams.get('detail'),
+        mode: urlParams.get('mode')
     };
 }
 
@@ -366,6 +374,12 @@ function updateURL(page, detail = null) {
     const url = new URL(window.location);
     url.searchParams.set('page', page);
     
+    // 현재 프라이빗 모드인지 확인하여 상태 유지
+    const isPrivateMode = url.searchParams.get('mode') === 'private';
+    if (isPrivateMode) {
+        url.searchParams.set('mode', 'private');
+    }
+
     if (detail) {
         url.searchParams.set('detail', detail);
     } else {
@@ -934,7 +948,8 @@ async function renderContactPage() {
 // 교육 신청 페이지 렌더링
 async function renderApplyPage() {
     const rawData = await getEducationData();
-    const isPrivateMode = window.location.hash === '#apply-private';
+    const urlParams = new URLSearchParams(window.location.search);
+    const isPrivateMode = urlParams.get('mode') === 'private';
     
     // 1. 현재 모드(공개/비공개)에 맞는 교육들만 1차 필터링
     const filteredRawData = rawData.filter(item => {
@@ -1328,13 +1343,16 @@ async function handleApplySubmit(event) {
     }
 
     const selectedRoundOption = roundSelect.options[roundSelect.selectedIndex];
+    const urlParams = new URLSearchParams(window.location.search);
+    const isPrivateMode = urlParams.get('mode') === 'private';
     
     const formData = {
         name: document.getElementById('apply-name').value.trim(),
         email: document.getElementById('apply-email').value.trim(),
         phone: document.getElementById('apply-phone').value.trim(),
         // 과정명 뒤에 회차 정보를 붙여서 전송 (Applications 시트 기록용)
-        course: `${courseSelect.value} (${selectedRoundOption.getAttribute('data-round')}회차)`,
+        // 비공개 모드 접속 시 '[비공개]' 머리말 추가
+        course: `${isPrivateMode ? '[비공개] ' : ''}${courseSelect.value} (${selectedRoundOption.getAttribute('data-round')}회차)`,
         startDate: selectedRoundOption.getAttribute('data-start'),
         endDate: selectedRoundOption.getAttribute('data-end'),
         employment: document.getElementById('apply-employment').value,
@@ -1911,3 +1929,82 @@ function closeApplyNotice() {
         document.body.style.overflow = '';
     }
 }
+
+/**
+ * [추가] 비공개 모드 전용 플로팅 버튼 및 안내 팝업
+ */
+function showPrivateModeFloatingButton() {
+    const btnId = 'private-mode-float';
+    if (document.getElementById(btnId)) return;
+
+    const floatBtnHTML = `
+        <div id="${btnId}" style="position: fixed; bottom: 30px; right: 30px; z-index: 1000; cursor: pointer;">
+            <div onclick="openPrivateModeNotice()" style="position: relative; background: #4f46e5; color: white; width: 56px; height: 56px; border-radius: 50%; box-shadow: 0 4px 15px rgba(79, 70, 229, 0.4); display: flex; align-items: center; justify-content: center; transition: all 0.3s ease;" onmouseover="this.style.transform='scale(1.1)'; this.style.background='#4338ca'" onmouseout="this.style.transform='scale(1)'; this.style.background='#4f46e5'">
+                <svg style="width: 28px; height: 28px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
+                </svg>
+                <!-- 빨간색 알림 점 -->
+                <div style="position: absolute; top: 2px; right: 2px; width: 12px; height: 12px; background: #ef4444; border-radius: 50%; border: 1px solid #ffffffc4;"></div>
+            </div>
+        </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', floatBtnHTML);
+}
+
+function openPrivateModeNotice() {
+    const noticeHTML = `
+        <div id="private-notice-overlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 2000; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
+            <div style="background: white; width: 90%; max-width: 450px; border-top: 5px solid #1f2937; border-radius: 16px; position: relative; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); animation: noticeScaleIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);">
+                <!-- 헤더 영역 -->
+                <div style="padding: 1.5rem; text-align: center; border-bottom: 1px solid #f3f4f6;">
+                    <div style="width: 60px; height: 60px; background: #fff7ed; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem;">
+                        <svg style="width: 32px; height: 32px; color: #facc15;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                        </svg>
+                    </div>
+                    <h3 style="font-size: 1.25rem; font-weight: 800; color: #111827; margin: 0;">비공개 모드 접속 안내</h3>
+                </div>
+                
+                <!-- 본문 영역 -->
+                <div style="padding: 2rem 1.5rem; text-align: center;">
+                    <p style="color: #4b5563; font-size: 1rem; line-height: 1.6; margin-bottom: 2rem; word-break: keep-all;">
+                        현재 <strong>비공개 모드</strong>로 접속 중입니다.<br>
+                        특정 링크를 통해서만 제공되는 교육 정보를 확인하실 수 있습니다.
+                    </p>
+                    <div style="background: #f8fafc; padding: 1.25rem; border-radius: 12px; margin-bottom: 2rem; border: 1px solid #e2e8f0;">
+                        <p style="margin: 0 0 0.75rem; color: #64748b; font-size: 0.85rem; font-weight: 600;">[공개 메인 사이트 이동]</p>
+                        <a href="${CONFIG.PUBLIC_SITE_URL}" style="color: #3b82f6; font-size: 1rem; font-weight: 700; text-decoration: underline;">
+                            ${CONFIG.PUBLIC_SITE_URL}
+                        </a>
+                    </div>
+                    <p style="color: #94a3b8; font-size: 0.8rem; margin: 0;">공개 사이트로 접속을 원하시면 위 주소로 재접속 바랍니다.</p>
+                </div>
+
+                <!-- 푸터/버튼 -->
+                <div style="padding: 1rem 1.5rem 1.5rem;">
+                    <button onclick="closePrivateNotice()" style="width: 100%; background: #1f2937; color: white; border: none; padding: 1rem; border-radius: 10px; font-weight: 700; cursor: pointer; transition: all 0.2s; font-size: 1rem;" onmouseover="this.style.background='#374151'" onmouseout="this.style.background='#1f2937'">
+                        확인했습니다
+                    </button>
+                </div>
+            </div>
+        </div>
+        <style>
+            @keyframes noticeScaleIn {
+                from { opacity: 0; transform: scale(0.9); }
+                to { opacity: 1; transform: scale(1); }
+            }
+        </style>
+    `;
+    document.body.insertAdjacentHTML('beforeend', noticeHTML);
+    document.body.style.overflow = 'hidden';
+}
+
+function closePrivateNotice() {
+    const overlay = document.getElementById('private-notice-overlay');
+    if (overlay) {
+        overlay.remove();
+        document.body.style.overflow = '';
+    }
+}
+window.openPrivateModeNotice = openPrivateModeNotice;
+window.closePrivateNotice = closePrivateNotice;
