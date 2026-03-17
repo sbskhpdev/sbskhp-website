@@ -1,13 +1,16 @@
 // SBSKHP 교육 서비스 플랫폼 - 메인 JavaScript 파일
 
-// 구글 앱스크립트 API URL
-const API_URL = "https://script.google.com/macros/s/AKfycbwkBLDzJKbSWYDGv8EmcgpUPRuVHh3ueYumaPBHy5OzTe42idUniJdUvJKsm0z4JwyW/exec";
-
 // 설정 (기능 On/Off)
 const CONFIG = {
-    SHOW_PRIVATE_NOTICE: true, // 비공개 모드 안내 플로팅 버튼 활성화 여부
+    PUBLIC_API_URL: "https://script.google.com/macros/s/AKfycbwkBLDzJKbSWYDGv8EmcgpUPRuVHh3ueYumaPBHy5OzTe42idUniJdUvJKsm0z4JwyW/exec",
+    PRIVATE_API_URL: "https://script.google.com/macros/s/AKfycbyxxR_B4sJ5c4j6DK4aid1NnsToq9_8_2G4lUq_edXid4h7_znFAaLjb0bEfEO4JvWb/exec", // 비공개 시트 전용 GAS URL 입력 필요
     PUBLIC_SITE_URL: "https://sbsantcl.co.kr" // 공개 사이트 주소
 };
+
+// 현재 모드에 따른 API URL 동적 할당
+const urlParams = new URLSearchParams(window.location.search);
+const isPrivateMode = urlParams.get('mode') === 'private';
+const API_URL = isPrivateMode ? CONFIG.PRIVATE_API_URL : CONFIG.PUBLIC_API_URL;
 
 // 전역 데이터 캐시
 let cachedEducationData = null;
@@ -117,28 +120,34 @@ async function getEducationData() {
         const response = await fetch(`${API_URL}?type=Education`);
         const data = await response.json();
         
-        // URL 파라미터 확인 (비공개 모드 여부 확인)
+        // URL 파라미터 확인
         const urlParams = new URLSearchParams(window.location.search);
         const forceEduId = urlParams.get('eduId');
         const isPrivateMode = urlParams.get('mode') === 'private';
 
-        // ID가 문자열로 올 수 있으므로 숫자로 변환 처리 (시트에서 숫자도 문자열로 넘어오는 경우가 많음)
-        cachedEducationData = data.filter(item => {
-            // "비공개" 열 값 정규화
-            const val = String(item['비공개'] || '').trim().toUpperCase();
-            const isPrivate = val === 'TRUE' || item['비공개'] === true;
-            
-            // 1. 비공개 모드(?mode=private)인 경우: 비공개 항목만 노출
-            if (isPrivateMode) return isPrivate;
-            
-            // 2. 일반 모드인 경우: 공개 항목만 노출 (단, 특정 ID 강제 노출은 유지)
-            const isTargetId = forceEduId && (String(item.ID) === String(forceEduId));
-            return !isPrivate || isTargetId;
-        }).map(item => ({
-            ...item,
-            id: parseInt(item.ID) || item.ID,
-            Image: formatDriveImageUrl(item.Image) // 드라이브 링크 자동 변환
-        }));
+        // 1. 비공개 시트 사용 시 (시트 자체가 분리됨)
+        if (isPrivateMode) {
+            cachedEducationData = data.map(item => ({
+                ...item,
+                id: parseInt(item.ID) || item.ID,
+                Image: formatDriveImageUrl(item.Image)
+            }));
+        } 
+        // 2. 공개 시트 사용 시 (기존 필터링 유지)
+        else {
+            cachedEducationData = data.filter(item => {
+                const val = String(item['비공개'] || '').trim().toUpperCase();
+                const isPrivate = val === 'TRUE' || item['비공개'] === true;
+                
+                const isTargetId = forceEduId && (String(item.ID) === String(forceEduId));
+                return !isPrivate || isTargetId;
+            }).map(item => ({
+                ...item,
+                id: parseInt(item.ID) || item.ID,
+                Image: formatDriveImageUrl(item.Image)
+            }));
+        }
+
         return cachedEducationData;
     } catch (error) {
         console.error("교육 데이터 로드 실패:", error);
@@ -150,7 +159,8 @@ async function getEducationData() {
 async function getCompanyData() {
     if (cachedCompanyData) return cachedCompanyData;
     try {
-        const response = await fetch(`${API_URL}?type=SBS%20Companys`);
+        // 계열사 목록은 항상 공개 시트에서 가져오도록 강제
+        const response = await fetch(`${CONFIG.PUBLIC_API_URL}?type=SBS%20Companys`);
         const data = await response.json();
         if (Array.isArray(data)) {
             cachedCompanyData = data.map(item => item['Company Name']).filter(Boolean);
@@ -260,12 +270,6 @@ document.addEventListener('DOMContentLoaded', function() {
 // 앱 초기화
 function initializeApp() {
     console.log('SBSKHP 교육 서비스 플랫폼 초기화');
-    
-    // [추가] 비공개 모드 진입 시 알림 플로팅 버튼 표시
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('mode') === 'private' && CONFIG.SHOW_PRIVATE_NOTICE) {
-        showPrivateModeFloatingButton();
-    }
     
     // 브라우저 뒤로/앞으로 버튼 처리 (통합된 라우터 사용)
     window.addEventListener('popstate', handleRouter);
@@ -948,18 +952,9 @@ async function renderContactPage() {
 // 교육 신청 페이지 렌더링
 async function renderApplyPage() {
     const rawData = await getEducationData();
-    const urlParams = new URLSearchParams(window.location.search);
-    const isPrivateMode = urlParams.get('mode') === 'private';
     
-    // 1. 현재 모드(공개/비공개)에 맞는 교육들만 1차 필터링
-    const filteredRawData = rawData.filter(item => {
-        const val = String(item['비공개'] || '').trim().toUpperCase();
-        const isPrivate = val === 'TRUE' || item['비공개'] === true;
-        return isPrivateMode ? isPrivate : !isPrivate;
-    });
-
-    // 2. 그룹화 및 모집중인 회차가 있는 과정만 선택
-    const groupedData = getGroupedEducationData(filteredRawData).filter(group => 
+    // 모드와 상관없이 해당 API에서 가져온 데이터 활용
+    const groupedData = getGroupedEducationData(rawData).filter(group => 
         group.rounds.some(r => r.status === '모집중')
     );
     
@@ -1100,7 +1095,8 @@ async function renderConfirmPage() {
 async function getFaqData() {
     if (cachedFaqData) return cachedFaqData;
     try {
-        const response = await fetch(`${API_URL}?type=FAQ`);
+        // FAQ는 항상 공개 시트에서 가져오도록 강제
+        const response = await fetch(`${CONFIG.PUBLIC_API_URL}?type=FAQ`);
         const data = await response.json();
         
         // 데이터가 배열이 아니거나 에러가 포함된 경우 처리
@@ -1351,8 +1347,7 @@ async function handleApplySubmit(event) {
         email: document.getElementById('apply-email').value.trim(),
         phone: document.getElementById('apply-phone').value.trim(),
         // 과정명 뒤에 회차 정보를 붙여서 전송 (Applications 시트 기록용)
-        // 비공개 모드 접속 시 '[비공개]' 머리말 추가
-        course: `${isPrivateMode ? '[비공개] ' : ''}${courseSelect.value} (${selectedRoundOption.getAttribute('data-round')}회차)`,
+        course: `${courseSelect.value} (${selectedRoundOption.getAttribute('data-round')}회차)`,
         startDate: selectedRoundOption.getAttribute('data-start'),
         endDate: selectedRoundOption.getAttribute('data-end'),
         employment: document.getElementById('apply-employment').value,
