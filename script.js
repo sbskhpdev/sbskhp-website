@@ -1462,7 +1462,14 @@ async function handleConfirmSubmit(event) {
                     statusBg = '#fee2e2';
                 }
                 
-                const showCancelBtn = status === '대기' || status === '승인';
+                // 오늘 날짜와 시작 날짜 비교 (시작일 포함 이후에는 취소 불가)
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const startDate = new Date(app['Start Date']);
+                startDate.setHours(0, 0, 0, 0);
+                
+                const isBeforeStart = startDate > today;
+                const showCancelBtn = (status === '대기' || status === '승인') && isBeforeStart;
                 
                 resultHtml += `
                     <div style="background-color: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 1.25rem; margin-bottom: 1rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
