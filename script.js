@@ -110,8 +110,25 @@ async function getEducationData() {
     try {
         const response = await fetch(`${API_URL}?type=Education`);
         const data = await response.json();
+        
+        // URL 파라미터 및 해시 확인 (비공개 링크 접속용)
+        const urlParams = new URLSearchParams(window.location.search);
+        const forceEduId = urlParams.get('eduId');
+        const isPrivateMode = window.location.hash === '#apply-private';
+
         // ID가 문자열로 올 수 있으므로 숫자로 변환 처리 (시트에서 숫자도 문자열로 넘어오는 경우가 많음)
-        cachedEducationData = data.map(item => ({
+        cachedEducationData = data.filter(item => {
+            // "비공개" 열 값 정규화
+            const val = String(item['비공개'] || '').trim().toUpperCase();
+            const isPrivate = val === 'TRUE' || item['비공개'] === true;
+            
+            // 1. 비공개 모드(#apply-private)인 경우: 비공개 항목만 노출
+            if (isPrivateMode) return isPrivate;
+            
+            // 2. 일반 모드인 경우: 공개 항목만 노출 (단, 특정 ID 강제 노출은 유지)
+            const isTargetId = forceEduId && (String(item.ID) === String(forceEduId));
+            return !isPrivate || isTargetId;
+        }).map(item => ({
             ...item,
             id: parseInt(item.ID) || item.ID,
             Image: formatDriveImageUrl(item.Image) // 드라이브 링크 자동 변환
@@ -317,17 +334,22 @@ function handleNavigation(event) {
 
 // 유효한 페이지인지 확인
 function isValidPage(page) {
-    const validPages = ['home', 'schedule', 'education', 'apply', 'confirm', 'faq', 'contact', 'privacy'];
+    const validPages = ['home', 'schedule', 'education', 'apply', 'apply-private', 'confirm', 'faq', 'contact', 'privacy'];
     return validPages.includes(page);
 }
 
 // URL 파라미터 파싱 함수
 function getURLParams() {
     const urlParams = new URLSearchParams(window.location.search);
-    const hashPage = window.location.hash.slice(1);
+    const hash = window.location.hash.slice(1);
     
     // 1. 쿼리 파라미터 'page' 우선, 없으면 Hash, 그것도 없으면 'home'
-    let page = urlParams.get('page') || hashPage || 'home';
+    let page = urlParams.get('page') || hash || 'home';
+    
+    // apply-private 해시 처리
+    if (hash === 'apply-private') {
+        page = 'apply';
+    }
     
     if (!isValidPage(page)) {
         page = 'home';
@@ -912,10 +934,20 @@ async function renderContactPage() {
 // 교육 신청 페이지 렌더링
 async function renderApplyPage() {
     const rawData = await getEducationData();
-    // 모집중인 회차가 하나라도 있는 과정들만 필터링 (모집예정 제외)
-    const groupedData = getGroupedEducationData(rawData).filter(group => 
+    const isPrivateMode = window.location.hash === '#apply-private';
+    
+    // 1. 현재 모드(공개/비공개)에 맞는 교육들만 1차 필터링
+    const filteredRawData = rawData.filter(item => {
+        const val = String(item['비공개'] || '').trim().toUpperCase();
+        const isPrivate = val === 'TRUE' || item['비공개'] === true;
+        return isPrivateMode ? isPrivate : !isPrivate;
+    });
+
+    // 2. 그룹화 및 모집중인 회차가 있는 과정만 선택
+    const groupedData = getGroupedEducationData(filteredRawData).filter(group => 
         group.rounds.some(r => r.status === '모집중')
     );
+    
     const pageInfo = await getPageInfo('apply');
 
     // 신청 안내 팝업 스크립트 추가
@@ -1219,7 +1251,14 @@ function setupApplyForm() {
                 }
 
                 const data = await getEducationData();
-                const rounds = data.filter(edu => edu.Title === selectedTitle && edu.Status === '모집중');
+                // "모집중"이거나 URL 파라미터로 직접 지정된 ID인 경우 목록에 포함
+                const urlParams = getURLParams();
+                const forceEduId = urlParams.detail;
+                
+                const rounds = data.filter(edu => 
+                    edu.Title === selectedTitle && 
+                    (edu.Status === '모집중' || (forceEduId && String(edu.id) === String(forceEduId)))
+                );
                 
                 if (rounds.length > 0) {
                     rounds.forEach(r => {
@@ -1245,6 +1284,19 @@ function setupApplyForm() {
                 getEducationData().then(data => {
                     const selectedEdu = data.find(item => item.id == educationId);
                     if (selectedEdu) {
+                        // 만약 비공개 과정이라면 courseSelect 목록에 해당 제목이 없을 수 있으므로 옵션 추가
+                        let exists = false;
+                        for (let i = 0; i < courseSelect.options.length; i++) {
+                            if (courseSelect.options[i].value === selectedEdu.Title) {
+                                exists = true;
+                                break;
+                            }
+                        }
+                        if (!exists) {
+                            const newOpt = new Option(selectedEdu.Title, selectedEdu.Title);
+                            courseSelect.add(newOpt);
+                        }
+
                         courseSelect.value = selectedEdu.Title;
                         // change 이벤트를 명시적으로 발생시켜 회차 목록을 불러옴
                         courseSelect.dispatchEvent(new Event('change'));
