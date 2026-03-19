@@ -360,8 +360,8 @@ function onEditTrigger(e) {
     const email = rowData[7];  // 이메일 (Index 7)
     const reason = rowData[13]; // 취소사유/비고 (Index 13)
 
-    // 상태가 변경되었을 때만 발송 (기존 값과 다른 경우)
-    if (e.oldValue !== status) {
+    // 상태가 변경되었고, 새로운 상태 값이 비어있지 않은 경우에만 발송
+    if (status && e.oldValue !== status) {
       sendApplicationEmail({
         name: name,
         email: email,
