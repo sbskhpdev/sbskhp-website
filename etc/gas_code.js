@@ -116,13 +116,18 @@ function doPost(e) {
       const searchEmail = (data.email || "").trim();
       const searchCourse = (data.course || "").trim();
 
-      // 이름, 이메일, 신청과정으로 행 찾기
-      for (let i = 1; i < allData.length; i++) {
-        if (allData[i][1].toString().trim() === searchName && 
-            allData[i][7].toString().trim() === searchEmail && 
-            allData[i][3].toString().trim() === searchCourse) {
-          foundRowIndex = i + 1; // 1-based index
-          break;
+      // [수정] 가장 최근(마지막 행) 데이터부터 거꾸로 찾고, 상태가 '대기' 또는 '승인'인 경우만 취소 처리
+      for (let i = allData.length - 1; i >= 1; i--) {
+        const rowName = allData[i][1].toString().trim();
+        const rowEmail = allData[i][7].toString().trim();
+        const rowCourse = allData[i][3].toString().trim();
+        const rowStatus = allData[i][6].toString().trim(); // 처리상태 (7번째 열)
+
+        if (rowName === searchName && rowEmail === searchEmail && rowCourse === searchCourse) {
+          if (rowStatus === '대기' || rowStatus === '승인') {
+            foundRowIndex = i + 1; // 1-based index
+            break;
+          }
         }
       }
 
