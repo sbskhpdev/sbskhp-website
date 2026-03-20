@@ -149,18 +149,33 @@ function doPost(e) {
     const existingData = sheet.getDataRange().getValues();
     const applyName = (data.name || "").trim();
     const applyEmail = (data.email || "").trim();
-    const applyCourse = (data.course || "").trim();
+    const applyFullCourse = (data.course || "").trim(); // 예: "AI영상제작 기초 (2회차)"
+    const applyCourseBase = applyFullCourse.split(' (')[0].trim(); // 예: "AI영상제작 기초"
 
-    const isDuplicate = existingData.some(row => 
-      row[1].toString().trim() === applyName && 
-      row[7].toString().trim() === applyEmail && 
-      row[3].toString().trim() === applyCourse
-    );
+    let duplicatedRound = "";
+    const isDuplicate = existingData.some(row => {
+      const rowName = row[1].toString().trim();
+      const rowEmail = row[7].toString().trim();
+      const rowFullCourse = row[3].toString().trim(); // 예: "AI영상제작 기초 (1회차)"
+      const rowCourseBase = rowFullCourse.split(' (')[0].trim();
+
+      if (rowName === applyName && rowEmail === applyEmail && rowCourseBase === applyCourseBase) {
+        // 이미 신청한 회차 정보를 추출 (메시지용)
+        const match = rowFullCourse.match(/\((.*?)회차\)/);
+        duplicatedRound = match ? match[1] : "";
+        return true;
+      }
+      return false;
+    });
 
     if (isDuplicate) {
+      const errorMsg = duplicatedRound 
+        ? `해당 교육의 ${duplicatedRound}회차를 이미 신청하셨습니다. 동일 교육의 타 회차 신청은 불가합니다. 자세한 사항은 신청 확인 메뉴를 이용해 주세요.`
+        : "이미 해당 교육 과정에 신청하신 내역이 있습니다. 신청 확인 메뉴를 이용해 주세요.";
+      
       return createJsonResponse({ 
         success: false, 
-        error: "신청 확인 메뉴를 이용해 주세요. 이미 해당 교육 과정에 신청하신 내역이 있습니다." 
+        error: errorMsg
       });
     }
 
