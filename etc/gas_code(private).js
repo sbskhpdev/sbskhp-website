@@ -148,13 +148,17 @@ function doPost(e) {
       const rowName = row[1].toString().trim();
       const rowEmail = row[7].toString().trim();
       const rowFullCourse = row[3].toString().trim(); // 예: "AI영상제작 기초 (1회차)"
+      const rowStatus = row[6].toString().trim(); // 처리상태 (Index 6)
       const rowCourseBase = rowFullCourse.split(' (')[0].trim();
 
+      // 이름, 이메일, 과정명이 일치하고 상태가 '취소'나 '반려'가 아닌 경우만 중복으로 간주
       if (rowName === applyName && rowEmail === applyEmail && rowCourseBase === applyCourseBase) {
-        // 이미 신청한 회차 정보를 추출 (메시지용)
-        const match = rowFullCourse.match(/\((.*?)회차\)/);
-        duplicatedRound = match ? match[1] : "";
-        return true;
+        if (rowStatus !== '취소' && rowStatus !== '반려') {
+          // 이미 신청한 회차 정보를 추출 (메시지용)
+          const match = rowFullCourse.match(/\((.*?)회차\)/);
+          duplicatedRound = match ? match[1] : "";
+          return true;
+        }
       }
       return false;
     });

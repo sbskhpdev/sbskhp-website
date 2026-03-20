@@ -2,8 +2,8 @@
 
 // 설정 (기능 On/Off)
 const CONFIG = {
-    PUBLIC_API_URL: "https://script.google.com/macros/s/AKfycbyHjymQD6nafqg-nPG9GlTdPO9wikqdYqJf7ho6BhVcmdqRegpJi6nGMwKNLWml7c5c-w/exec",
-    PRIVATE_API_URL: "https://script.google.com/macros/s/AKfycbzPoc2UGbOvnV5UbKNpQji5dmaz0B5e0O9wy1lPEuNhjvGKMVFC6hqfohIRRnLyV8ZC/exec", // 비공개 시트 전용 GAS URL 입력 필요
+    PUBLIC_API_URL: "https://script.google.com/macros/s/AKfycbzWJ2i6As46TrqK2QfBrH_zbmwV6tNh2mLsj9gmu1yGHHmh68UrcKtiLyPFtm0ttu4T9g/exec",
+    PRIVATE_API_URL: "https://script.google.com/macros/s/AKfycbwc5CWG9cZK-QqbQvnQLJgNjN8VOUUt06ksrFrB_vPRM4y4b38QLZfP1DcqyLt_pjI-/exec", // 비공개 시트 전용 GAS URL 입력 필요
     PUBLIC_SITE_URL: "https://sbsantcl.co.kr" // 공개 사이트 주소
 };
 
