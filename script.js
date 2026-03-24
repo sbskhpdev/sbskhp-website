@@ -2,7 +2,7 @@
 
 // 설정 (기능 On/Off)
 const CONFIG = {
-    PUBLIC_API_URL: "https://script.google.com/macros/s/AKfycbyeALJwyEhZzVZUMpMpEAdgJsmCnNFGALzNFZIXNL6LnM4-RNREYbCStyKzVizgwyB1_w/exec", //
+    PUBLIC_API_URL: "https://script.google.com/macros/s/AKfycbzzegjYBl32qhjCs3cfabjR9r1eamBe97xN0I3lrnhCKsFpCV-PBhGU-BL3jm9E4Ho/exec", // 01아카데미 계정 소유 시트로 변경
     PRIVATE_API_URL: "https://script.google.com/macros/s/AKfycbxHtLHwt5T0ZD1UeHvYuWrgH1LgQLbCoMcBMPDgJLyZHl5C1mv32M3tdoJoTQ37VjVl7w/exec", // 01아카데미 계정 소유 시트로 변경
     PUBLIC_SITE_URL: "https://sbsantcl.co.kr" // 공개 사이트 주소
 };
@@ -159,8 +159,8 @@ async function getEducationData() {
 async function getCompanyData() {
     if (cachedCompanyData) return cachedCompanyData;
     try {
-        // 계열사 목록은 항상 공개 시트에서 가져오도록 강제
-        const response = await fetch(`${CONFIG.PUBLIC_API_URL}?type=SBS%20Companys`);
+        // 현재 모드에 맞는 API_URL을 사용하여 계열사 목록을 가져옵니다.
+        const response = await fetch(`${API_URL}?type=SBS%20Companys`);
         const data = await response.json();
         if (Array.isArray(data)) {
             cachedCompanyData = data.map(item => item['Company Name']).filter(Boolean);
@@ -314,7 +314,9 @@ async function handleRouter() {
     const params = getURLParams();
     
     // 현재 페이지가 렌더링된 것과 다르거나 초기화 중인 경우 페이지 로드
+    // params.page가 hash와 searchParams에서 추출되므로, 강제로 페이지 전환이 일어나도록 보장
     if (currentPage !== params.page || isInitializing) {
+        console.log(`[Router] Switching page: ${currentPage} -> ${params.page}`);
         isInitializing = false;
         await loadPage(params.page);
     }
@@ -322,9 +324,11 @@ async function handleRouter() {
     // 상세 페이지(모달) 처리
     const currentModal = document.getElementById('education-modal');
     if (params.detail) {
-        // 모달이 없거나 열려있더라도 파라미터가 있으면 호출 (openEducationModal 내부에서 중복 체크 및 제거 수행)
-        if (!currentModal) {
-            openEducationModal(params.detail);
+        // 교육 신청 페이지('apply')가 아닐 때만 상세 모달을 띄움
+        if (params.page !== 'apply') {
+            if (!currentModal) {
+                openEducationModal(params.detail);
+            }
         }
     } else {
         // URL에 detail이 없는데 모달이 열려있으면 UI만 닫기
@@ -376,24 +380,29 @@ function getURLParams() {
 // URL 업데이트 함수
 function updateURL(page, detail = null) {
     const url = new URL(window.location.href);
+    
+    // 1. 페이지 파라미터 설정
     url.searchParams.set('page', page);
     
-    // 현재 URL에서 mode=private 파라미터가 있으면 유지
+    // 2. 현재 URL에서 mode=private 파라미터가 있으면 유지
     const currentMode = new URLSearchParams(window.location.search).get('mode');
     if (currentMode === 'private') {
         url.searchParams.set('mode', 'private');
     }
 
+    // 3. detail ID 설정 또는 삭제
     if (detail) {
         url.searchParams.set('detail', detail);
     } else {
         url.searchParams.delete('detail');
     }
     
+    // 4. Hash 업데이트
     url.hash = page;
     
+    // 5. URL이 실제로 변경되었을 때만 처리
     if (window.location.href !== url.href) {
-        window.history.pushState({ page, detail }, '', url);
+        window.history.pushState({ page, detail }, '', url.toString());
         // pushState는 popstate를 트리거하지 않으므로 수동으로 라우터 호출
         handleRouter();
     }
@@ -1771,10 +1780,14 @@ async function openEducationModal(educationId) {
 
 // 교육 신청하기 버튼 클릭 처리
 function applyEducation(educationId) {
-    // 모달을 닫되 URL 업데이트는 하지 않음 (바로 다음 updateURL에서 처리할 것이므로)
-    closeEducationModal(false);
+    // 1. 모달 팝업 요소 제거
+    const modal = document.getElementById('education-modal');
+    if (modal) {
+        modal.classList.remove('active');
+        modal.remove(); // 지연 시간 없이 즉시 제거하여 중복 방지
+    }
     
-    // 신청 페이지로 상세 ID와 함께 이동
+    // 2. 신청 페이지로 상세 ID와 함께 이동
     updateURL('apply', educationId);
 }
 
@@ -1784,10 +1797,12 @@ function closeEducationModal(shouldUpdateURL = true) {
     if (modal) {
         modal.classList.remove('active');
         setTimeout(() => {
-            modal.remove();
+            if (modal.parentNode) {
+                modal.remove();
+            }
         }, 300);
         
-        // URL에서 detail 파라미터 제거
+        // URL에서 detail 파라미터 제거하며 다시 교육 목록 페이지 상태로 되돌림
         if (shouldUpdateURL) {
             updateURL('education');
         }
