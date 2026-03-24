@@ -2,8 +2,8 @@
 
 // 설정 (기능 On/Off)
 const CONFIG = {
-    PUBLIC_API_URL: "https://script.google.com/macros/s/AKfycbyeALJwyEhZzVZUMpMpEAdgJsmCnNFGALzNFZIXNL6LnM4-RNREYbCStyKzVizgwyB1_w/exec",
-    PRIVATE_API_URL: "https://script.google.com/macros/s/AKfycbypNvKKgzFT43Wyr3UogmRnhLxjxs3OuWwiuXNwmC50kTuQSzlN3L_i4Qe6tHic98Dc/exec", // 비공개 시트 전용 GAS URL 입력 필요
+    PUBLIC_API_URL: "https://script.google.com/macros/s/AKfycbyeALJwyEhZzVZUMpMpEAdgJsmCnNFGALzNFZIXNL6LnM4-RNREYbCStyKzVizgwyB1_w/exec", //
+    PRIVATE_API_URL: "https://script.google.com/macros/s/AKfycbxHtLHwt5T0ZD1UeHvYuWrgH1LgQLbCoMcBMPDgJLyZHl5C1mv32M3tdoJoTQ37VjVl7w/exec", // 01아카데미 계정 소유 시트로 변경
     PUBLIC_SITE_URL: "https://sbsantcl.co.kr" // 공개 사이트 주소
 };
 
@@ -375,12 +375,12 @@ function getURLParams() {
 
 // URL 업데이트 함수
 function updateURL(page, detail = null) {
-    const url = new URL(window.location);
+    const url = new URL(window.location.href);
     url.searchParams.set('page', page);
     
-    // 현재 프라이빗 모드인지 확인하여 상태 유지
-    const isPrivateMode = url.searchParams.get('mode') === 'private';
-    if (isPrivateMode) {
+    // 현재 URL에서 mode=private 파라미터가 있으면 유지
+    const currentMode = new URLSearchParams(window.location.search).get('mode');
+    if (currentMode === 'private') {
         url.searchParams.set('mode', 'private');
     }
 
@@ -1312,10 +1312,15 @@ function setupApplyForm() {
                         // change 이벤트를 명시적으로 발생시켜 회차 목록을 불러옴
                         courseSelect.dispatchEvent(new Event('change'));
                         
-                        // 회차 목록이 비동기로 로드되므로 약간의 지연 후 회차 ID 선택
-                        setTimeout(() => {
-                            roundSelect.value = educationId;
-                        }, 500);
+                        // 회차 목록이 비동기로 로드되므로 회차가 로드될 때까지 최대 2초간 감시
+                        let checkCount = 0;
+                        const checkInterval = setInterval(() => {
+                            if (roundSelect.options.length > 1 || checkCount > 20) {
+                                roundSelect.value = educationId;
+                                clearInterval(checkInterval);
+                            }
+                            checkCount++;
+                        }, 100);
                     }
                 });
             }
