@@ -207,7 +207,8 @@ async function getPageInfo(pageName) {
     
     return {
         title: pageInfo ? pageInfo.Title : sheetPageName,
-        subtitle: pageInfo ? pageInfo.Subtitle : ''
+        subtitle: pageInfo ? pageInfo.Subtitle : '',
+        popup: pageInfo ? pageInfo.PopUp : ''
     };
 }
 
@@ -1903,9 +1904,23 @@ function closePrivacyModal() {
 }
 
 // 교육 신청 안내 팝업 열기
-function showApplyNotice() {
+async function showApplyNotice() {
     const noticeId = 'apply-notice-popup';
     if (document.getElementById(noticeId)) return;
+
+    // 시트에서 '교육 신청' 데이터 가져오기 (Page Subtitle 시트의 PopUp 셀에 HTML 코드가 들어있다고 가정)
+    const pageInfo = await getPageInfo('apply');
+    const noticeContent = pageInfo.popup || `
+        <h3 style="font-size: 1.25rem; font-weight: 700; color: #111827; text-align: center; margin-bottom: 0.75rem;">교육 신청 안내</h3>
+        <div style="color: #4b5563; line-height: 1.7; font-size: 1rem; text-align: center; padding: 0 1rem;">
+            <p style="margin-bottom: 0.75rem;">교육 신청은 일정을 충분히 고려하여<br>신청해 주시기 바랍니다.</p>
+            <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.5rem; font-weight: 600; color: #1f2937;">
+                <li>모든 교육 과정 <span style="color: #ef4444; font-weight: 700;">[선착순]</span> 마감</li>
+                <li>교육 신청자 <span style="color: #ef4444; font-weight: 700;">[12인 미만]</span>일시 교육 <span style="color: #ef4444; font-weight: 700;">[취소]</span></li>
+                <li>교육일 <span style="color: #ef4444; font-weight: 700;">[3일전 취소]</span>시 향후 <span style="color: #ef4444; font-weight: 700;">[교육참석 불가]</span></li>
+            </ul>
+        </div>
+    `;
 
     const modalHTML = `
         <div id="${noticeId}" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; z-index: 2000; padding: 1.5rem;">
@@ -1917,11 +1932,7 @@ function showApplyNotice() {
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                         </svg>
                     </div>
-                    <h3 style="font-size: 1.25rem; font-weight: 700; color: #111827; text-align: center; margin-bottom: 0.75rem;">교육 신청 안내</h3>
-                    <div style="color: #4b5563; line-height: 1.7; font-size: 1rem; text-align: center; padding: 0 1rem;">
-                        <p style="margin-bottom: 0.75rem;">교육 신청은 일정을 충분히 고려하여<br>신청해 주시기 바랍니다.</p>
-                        <p style="margin: 0; font-weight: 600; color: #1f2937;">모든 교육 과정은 <span style="color: #ef4444; font-weight: 700;">선착순</span>으로 마감됩니다.</p>
-                    </div>
+                    ${noticeContent}
                 </div>
                 <div style="padding: 1rem 1.5rem 2rem; display: flex; justify-content: center;">
                     <button onclick="closeApplyNotice()" style="width: 100%; max-width: 200px; background: #3b82f6; color: white; border: none; padding: 0.875rem; border-radius: 10px; font-weight: 600; cursor: pointer; transition: all 0.2s; font-size: 0.95rem; box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.3);" onmouseover="this.style.background='#2563eb'" onmouseout="this.style.background='#3b82f6'">
@@ -1942,6 +1953,11 @@ function showApplyNotice() {
     // 스크롤 방지
     document.body.style.overflow = 'hidden';
 }
+
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    // 스크롤 방지
+    document.body.style.overflow = 'hidden';
+
 
 // 교육 신청 안내 팝업 닫기
 function closeApplyNotice() {
