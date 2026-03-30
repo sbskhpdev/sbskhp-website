@@ -89,7 +89,11 @@ function createJsonResponse(data) {
  * 웹사이트에서 데이터를 제출할 때 실행되는 함수 (신청서 저장)
  */
 function doPost(e) {
+  const lock = LockService.getScriptLock();
   try {
+    // 1. 최대 10초 대기 (동시 신청 방지)
+    lock.waitLock(10000);
+
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const sheet = getSheetCaseInsensitive(ss, 'Applications');
     
@@ -148,6 +152,50 @@ function doPost(e) {
     const applyFullCourse = (data.course || "").trim(); // 예: "AI영상제작 기초 (2회차)"
     const applyCourseBase = applyFullCourse.split(' (')[0].trim(); // 예: "AI영상제작 기초"
 
+    // --- 1. 정원 및 현재 인원 체크 로직 추가 ---
+    const eduSheet = getSheetCaseInsensitive(ss, 'Education');
+    if (eduSheet) {
+      const eduData = eduSheet.getDataRange().getValues();
+      const eduHeaders = eduData[0];
+      const titleIdx = eduHeaders.indexOf("Title");
+      const roundIdx = eduHeaders.indexOf("회차");
+      const limitIdx = eduHeaders.indexOf("정원");
+      const statusIdx = eduHeaders.indexOf("Status");
+
+      const roundMatch = applyFullCourse.match(/\((.*?)회차\)/);
+      const applyRoundNum = roundMatch ? roundMatch[1] : "";
+
+      const eduRowIndex = eduData.findIndex((r, idx) => {
+        if (idx === 0) return false;
+        const sTitle = String(r[titleIdx]).trim();
+        let sRound = String(r[roundIdx]).trim().replace(/[^0-9]/g, '');
+        return sTitle === applyCourseBase && sRound === applyRoundNum;
+      });
+
+      if (eduRowIndex !== -1) {
+        const eduRowValue = eduData[eduRowIndex];
+        const maxCapacity = parseInt(eduRowValue[limitIdx]) || 999;
+        
+        const currentCount = existingData.filter((row, idx) => {
+          if (idx === 0) return false;
+          const rCourse = String(row[3]).trim();
+          const rStatus = String(row[6]).trim();
+          return rCourse === applyFullCourse && rStatus !== '취소' && rStatus !== '반려';
+        }).length;
+
+        if (currentCount >= maxCapacity) {
+          if (statusIdx !== -1) {
+            eduSheet.getRange(eduRowIndex + 1, statusIdx + 1).setValue('모집마감');
+          }
+          return createJsonResponse({ 
+            success: false, 
+            error: `죄송합니다. 해당 과정은 모집 정원이 초과되어 마감되었습니다.` 
+          });
+        }
+      }
+    }
+    // ----------------------------------------
+
     let duplicatedRound = "";
     const isDuplicate = existingData.some(row => {
       const rowName = row[1].toString().trim();
@@ -200,6 +248,40 @@ function doPost(e) {
 
     sheet.appendRow(newRow);
     
+    // --- 2. 신청 후 정원이 꽉 찼는지 다시 확인하여 자동 모집마감 처리 ---
+    const finalEduSheet = getSheetCaseInsensitive(ss, 'Education');
+    if (finalEduSheet) {
+      const finalEduData = finalEduSheet.getDataRange().getValues();
+      const finalHeaders = finalEduData[0];
+      const fTitleIdx = finalHeaders.indexOf("Title");
+      const fRoundIdx = finalHeaders.indexOf("회차");
+      const fLimitIdx = finalHeaders.indexOf("정원");
+      const fStatusIdx = finalHeaders.indexOf("Status");
+
+      const rMatch = applyFullCourse.match(/\((.*?)회차\)/);
+      const rNum = rMatch ? rMatch[1] : "";
+
+      const fRowIdx = finalEduData.findIndex((r, idx) => {
+        if (idx === 0) return false;
+        return String(r[fTitleIdx]).trim() === applyCourseBase && 
+               String(r[fRoundIdx]).trim().replace(/[^0-9]/g, '') === rNum;
+      });
+
+      if (fRowIdx !== -1) {
+        const fLimit = parseInt(finalEduData[fRowIdx][fLimitIdx]) || 999;
+        const fCount = sheet.getDataRange().getValues().filter((row, idx) => {
+          if (idx === 0) return false;
+          return String(row[3]).trim() === applyFullCourse && 
+                 (String(row[6]).trim() === '대기' || String(row[6]).trim() === '승인');
+        }).length;
+
+        if (fCount >= fLimit && fStatusIdx !== -1) {
+          finalEduSheet.getRange(fRowIdx + 1, fStatusIdx + 1).setValue('모집마감');
+        }
+      }
+    }
+    // ------------------------------------------------------------
+
     // [추가] 신청 완료 안내 이메일 발송
     sendApplicationEmail({
       name: data.name,
@@ -211,6 +293,9 @@ function doPost(e) {
     return createJsonResponse({ success: true, message: "신청이 성공적으로 접수되었습니다." });
   } catch (err) {
     return createJsonResponse({ error: err.toString() });
+  } finally {
+    // 2. 잠금 해제 (반드시 실행)
+    lock.releaseLock();
   }
 }
 

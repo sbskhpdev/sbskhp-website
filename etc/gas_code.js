@@ -98,7 +98,11 @@ function createJsonResponse(data) {
  * 웹사이트에서 데이터를 제출할 때 실행되는 함수 (신청서 저장)
  */
 function doPost(e) {
+  const lock = LockService.getScriptLock();
   try {
+    // 1. 최대 10초 대기 (동시 신청 방지)
+    lock.waitLock(10000);
+
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const sheet = getSheetCaseInsensitive(ss, 'Applications');
     
@@ -156,6 +160,54 @@ function doPost(e) {
     const applyEmail = (data.email || "").trim();
     const applyFullCourse = (data.course || "").trim(); // 예: "AI영상제작 기초 (2회차)"
     const applyCourseBase = applyFullCourse.split(' (')[0].trim(); // 예: "AI영상제작 기초"
+
+    // --- 1. 정원 및 현재 인원 체크 로직 추가 ---
+    const eduSheet = getSheetCaseInsensitive(ss, 'Education');
+    if (eduSheet) {
+      const eduData = eduSheet.getDataRange().getValues();
+      const eduHeaders = eduData[0];
+      const titleIdx = eduHeaders.indexOf("Title");
+      const roundIdx = eduHeaders.indexOf("회차");
+      const limitIdx = eduHeaders.indexOf("정원");
+      const statusIdx = eduHeaders.indexOf("Status");
+
+      // 신청한 회차 번호 추출 (예: " (2회차)" -> "2")
+      const roundMatch = applyFullCourse.match(/\((.*?)회차\)/);
+      const applyRoundNum = roundMatch ? roundMatch[1] : "";
+
+      // 해당 교육 과정의 정원 정보 찾기
+      const eduRowIndex = eduData.findIndex((r, idx) => {
+        if (idx === 0) return false;
+        const sTitle = String(r[titleIdx]).trim();
+        let sRound = String(r[roundIdx]).trim().replace(/[^0-9]/g, '');
+        return sTitle === applyCourseBase && sRound === applyRoundNum;
+      });
+
+      if (eduRowIndex !== -1) {
+        const eduRowValue = eduData[eduRowIndex];
+        const maxCapacity = parseInt(eduRowValue[limitIdx]) || 999;
+        
+        // 현재 해당 과정을 신청한 인원 카운트 (상태가 '취소', '반려'가 아닌 것)
+        const currentCount = existingData.filter((row, idx) => {
+          if (idx === 0) return false;
+          const rCourse = String(row[3]).trim();
+          const rStatus = String(row[6]).trim();
+          return rCourse === applyFullCourse && rStatus !== '취소' && rStatus !== '반려';
+        }).length;
+
+        if (currentCount >= maxCapacity) {
+          // 정원이 찼다면 Status를 '모집마감'으로 변경
+          if (statusIdx !== -1) {
+            eduSheet.getRange(eduRowIndex + 1, statusIdx + 1).setValue('모집마감');
+          }
+          return createJsonResponse({ 
+            success: false, 
+            error: `죄송합니다. 해당 과정은 모집 정원이 초과되어 마감되었습니다.` 
+          });
+        }
+      }
+    }
+    // ----------------------------------------
 
     let duplicatedRound = "";
     const isDuplicate = existingData.some(row => {
@@ -223,7 +275,10 @@ function doPost(e) {
   }
 }
 
-/**
+/** finally {
+    // 2. 잠금 해제 (반드시 실행)
+    lock.releaseLock();
+  }
  * [추가] 이메일 발송 통합 함수
  */
 function sendApplicationEmail(info) {

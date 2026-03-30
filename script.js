@@ -2,8 +2,8 @@
 
 // 설정 (기능 On/Off)
 const CONFIG = {
-    PUBLIC_API_URL: "https://script.google.com/macros/s/AKfycbzzegjYBl32qhjCs3cfabjR9r1eamBe97xN0I3lrnhCKsFpCV-PBhGU-BL3jm9E4Ho/exec", // 01아카데미 계정 소유 시트로 변경
-    PRIVATE_API_URL: "https://script.google.com/macros/s/AKfycbxHtLHwt5T0ZD1UeHvYuWrgH1LgQLbCoMcBMPDgJLyZHl5C1mv32M3tdoJoTQ37VjVl7w/exec", // 01아카데미 계정 소유 시트로 변경
+    PUBLIC_API_URL: "https://script.google.com/macros/s/AKfycbxYSHfsF6NOoFo7SJST_XeEDo_WMViOxr4MSeGUIEkzLUL958vPzMVpA4geiYJDpQ/exec", // 01아카데미 계정 소유 시트로 변경
+    PRIVATE_API_URL: "https://script.google.com/macros/s/AKfycbzdzgA5BYyQy-5gkIuM8Q5aCI1e3qye79Im07SCgrqEiteXIlfrW_GzXcaOR_osFwQVOg/exec", // 01아카데미 계정 소유 시트로 변경
     PUBLIC_SITE_URL: "https://sbsantcl.co.kr" // 공개 사이트 주소
 };
 
@@ -1408,9 +1408,14 @@ async function handleApplySubmit(event) {
         }
     } catch (error) {
         console.error("Submission error:", error);
-        // 서버에서 온 에러 메시지가 있으면 해당 메시지만 표시하고, 
-        // 그렇지 않으면(예: 네트워크 오류 등) 일반 오류 메시지를 표시합니다.
-        const errorMsg = error.message.includes('이미') || error.message.includes('확인') 
+        // 서버에서 온 에러 메시지가 정원 초과, 중복 신청 등 사용자 안내 메시지인 경우 
+        // "신청 중 오류..." 문구를 생략하고 서버 메시지만 깔끔하게 표시합니다.
+        const isUserGuidance = error.message.includes('이미') || 
+                               error.message.includes('확인') || 
+                               error.message.includes('정원') ||
+                               error.message.includes('모집마감');
+                               
+        const errorMsg = isUserGuidance 
             ? error.message 
             : '신청 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.\n' + error.message;
         alert(errorMsg);
