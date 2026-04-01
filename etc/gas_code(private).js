@@ -228,7 +228,7 @@ function doPost(e) {
     }
 
     // [수정] 헤더 이름을 기준으로 동적으로 데이터 배열 생성
-    const headers = sheet.getDataRange().getValues()[0];
+    const headers = sheet.getDataRange().getValues()[0].map(h => h.toString().trim());
     const newRow = new Array(headers.length).fill("");
 
     // 각 필드 매핑 로직 (헤더 이름 기준)
