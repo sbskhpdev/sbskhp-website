@@ -282,7 +282,7 @@ function doPost(e) {
  * [추가] 이메일 발송 통합 함수
  */
 function sendApplicationEmail(info) {
-  const { name, email, course, status, reason } = info;
+  const { name, email, course, status, reason, waitingNum } = info;
   
   // [추가] Education 시트에서 교육 정보 검색
   const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -394,6 +394,7 @@ function sendApplicationEmail(info) {
         <div ${boxStyle}>
           <strong>과정명:</strong> ${course}<br>
           <strong>승인 대기:</strong> 정원 외 신청으로 취소 또는 결원 발생 시 순차적으로 승인 전환<br>
+          ${waitingNum ? `<strong>대기 순번:</strong> ${waitingNum}번<br>` : ''}
           <strong>문의:</strong> haba98@sbs.co.kr
         </div>
         <p>본 과정은 선착순 정원 외 신청으로, 기존 승인 인원 중 <strong>결원 발생 시</strong> 순차적으로 최종 승인 처리될 예정입니다.</p>
@@ -431,13 +432,29 @@ function onEditTrigger(e) {
   // 'Applications' 시트이고, 7번째 열(처리상태)이 수정된 경우만 작동
   if (sheetName === 'Applications' && range.getColumn() === 7 && range.getRow() > 1) {
     const rowIndex = range.getRow();
-    const rowData = sheet.getRange(rowIndex, 1, 1, 14).getValues()[0];
+    const fullData = sheet.getDataRange().getValues();
+    const headers = fullData[0];
+    const rowData = fullData[rowIndex - 1];
     
-    const status = rowData[6]; // 처리상태 (Index 6)
-    const name = rowData[1];   // 이름 (Index 1)
-    const course = rowData[3]; // 신청과정 (Index 3)
-    const email = rowData[7];  // 이메일 (Index 7)
-    const reason = rowData[13]; // 취소사유/비고 (Index 13)
+    // 헤더 이름을 기준으로 인덱스 찾기 (유연한 대응)
+    const idxStatus = headers.indexOf("처리상태");
+    const idxName = headers.indexOf("이름");
+    const idxCourse = headers.indexOf("신청과정");
+    const idxEmail = headers.indexOf("이메일");
+    const idxNote = headers.indexOf("비고"); 
+    const idxCancelReason = headers.indexOf("취소사유");
+    const idxWaitingNum = headers.indexOf("대기번호");
+
+    const status = rowData[idxStatus]; 
+    const name = rowData[idxName];   
+    const course = rowData[idxCourse]; 
+    const email = rowData[idxEmail];  
+    const note = idxNote !== -1 ? rowData[idxNote] : "";
+    const cancelReason = idxCancelReason !== -1 ? rowData[idxCancelReason] : "";
+    const waitingNum = idxWaitingNum !== -1 ? rowData[idxWaitingNum] : "";
+
+    // 메일 발송 시 활용할 '사유' 결정 (취소 상태면 취소사유, 아니면 비고 사용)
+    const reasonToSend = (status === '취소' || status === '반려') ? cancelReason : note;
 
     // 상태가 변경되었고, 새로운 상태 값이 비어있지 않은 경우에만 발송
     if (status && e.oldValue !== status) {
@@ -446,7 +463,8 @@ function onEditTrigger(e) {
         email: email,
         course: course,
         status: status,
-        reason: reason
+        reason: reasonToSend,
+        waitingNum: waitingNum 
       });
     }
   }
