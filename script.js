@@ -2,8 +2,8 @@
 
 // 설정 (기능 On/Off)
 const CONFIG = {
-    PUBLIC_API_URL: "https://script.google.com/macros/s/AKfycbx1A1pcP0NjWOczbSnkxJ6zs-qB0oAN8C5z3JD37-QODQY7xrU5GQuEbXJ7bc0FNrU/exec", // 01아카데미 계정 소유 시트로 변경
-    PRIVATE_API_URL: "https://script.google.com/macros/s/AKfycbzjDnhGZ3LH6vAv_s7CwEjdIwh6r6al1yhH6cxSHzXGy329T42JN1nxBgxRJT-13Dj2Kw/exec", // 01아카데미 계정 소유 시트로 변경
+    PUBLIC_API_URL: "https://script.google.com/macros/s/AKfycbyniHT6zhdPEu5t31SJtgWcinT3seUnNmdDkBj2-Z4F9XMKbYMLapEEnG54dgEZZgU/exec", // 01아카데미 계정 소유 시트로 변경
+    PRIVATE_API_URL: "https://script.google.com/macros/s/AKfycbzsNF4-B_62qg3pZOL77OjPvSMI__U68733eBiuqGd5k8ooN_eMUp2Ly1jPUvq6LQnvZQ/exec", // 01아카데미 계정 소유 시트로 변경
     PUBLIC_SITE_URL: "https://sbsantcl.co.kr" // 공개 사이트 주소
 };
 

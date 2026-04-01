@@ -240,24 +240,31 @@ function doPost(e) {
       });
     }
 
-    // 새 헤더 순서대로 데이터 배열 생성
-    // [신청일시(1), 이름(2), 연락처(3), 신청과정(4), Start Date(5), End Date(6), 처리상태(7), 이메일(8), 회사명(9), 부서/직급(10), 재직여부(11), 주민등록번호(12), 비고(13), 취소사유(14)]
-    const newRow = [
-      new Date(), // 신청일시
-      data.name,
-      "'" + data.phone, // 연락처
-      data.course,
-      data.startDate || '',
-      data.endDate || '',
-      '대기', // 처리상태
-      data.email,
-      data.company || '',
-      data.position,
-      data.employment,
-      '', // 주민등록번호 (필요 시 수집 가능)
-      '', // 비고
-      ''  // 취소사유
-    ];
+    // [수정] 헤더 이름을 기준으로 동적으로 데이터 배열 생성
+    const headers = sheet.getDataRange().getValues()[0];
+    const newRow = new Array(headers.length).fill("");
+
+    // 각 필드 매핑 로직 (헤더 이름 기준)
+    const setVal = (name, val) => {
+      const idx = headers.indexOf(name);
+      if (idx !== -1) newRow[idx] = val;
+    };
+
+    setVal("신청일시", new Date());
+    setVal("이름", data.name);
+    setVal("연락처", "'" + data.phone);
+    setVal("신청과정", data.course);
+    setVal("Start Date", data.startDate || '');
+    setVal("End Date", data.endDate || '');
+    setVal("처리상태", '대기');
+    setVal("이메일", data.email);
+    setVal("회사명", data.company || '');
+    setVal("부서/직급", data.position);
+    setVal("재직여부", data.employment);
+    setVal("주민등록번호", '');
+    setVal("비고", '');
+    setVal("취소사유", '');
+    // '처리변환일시'는 초기값이므로 건너뜀
 
     sheet.appendRow(newRow);
     
@@ -444,6 +451,7 @@ function onEditTrigger(e) {
     const idxNote = headers.indexOf("비고"); 
     const idxCancelReason = headers.indexOf("취소사유");
     const idxWaitingNum = headers.indexOf("대기번호");
+    const idxStatusModified = headers.indexOf("처리변환일시");
 
     const status = rowData[idxStatus]; 
     const name = rowData[idxName];   
@@ -453,11 +461,15 @@ function onEditTrigger(e) {
     const cancelReason = idxCancelReason !== -1 ? rowData[idxCancelReason] : "";
     const waitingNum = idxWaitingNum !== -1 ? rowData[idxWaitingNum] : "";
 
-    // 메일 발송 시 활용할 '사유' 결정 (취소 상태면 취소사유, 아니면 비고 사용)
-    const reasonToSend = (status === '취소' || status === '반려') ? cancelReason : note;
-
-    // 상태가 변경되었고, 새로운 상태 값이 비어있지 않은 경우에만 발송
+    // 상태가 변경되었고, 새로운 상태 값이 비어있지 않은 경우에만 처리
     if (status && e.oldValue !== status) {
+      // 1. 처리변환일시 기록
+      if (idxStatusModified !== -1) {
+        sheet.getRange(rowIndex, idxStatusModified + 1).setValue(new Date());
+      }
+
+      // 2. 이메일 발송
+      const reasonToSend = (status === '취소' || status === '반려') ? cancelReason : note;
       sendApplicationEmail({
         name: name,
         email: email,
