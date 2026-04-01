@@ -216,6 +216,9 @@ async function getPageInfo(pageName) {
 function getGroupedEducationData(data) {
     const groups = {};
     data.forEach(item => {
+        // [수정] '마감' 상태인 회차는 애초에 데이터에서 제외 (스킵)
+        if (item.Status === '마감') return;
+        
         if (!groups[item.Title]) {
             groups[item.Title] = {
                 id: item.id,
@@ -1714,7 +1717,7 @@ async function openEducationModal(educationId) {
                     </div>
                     <div style="margin-bottom: 2rem;">
                         <h3 style="font-size: 1.125rem; font-weight: 600; color: #1f2937; margin-bottom: 0.75rem;">커리큘럼</h3>
-                        <div style="padding: 1rem; background: #f8fafc; border-radius: 8px; color: #374151; line-height: 1.6; white-space: pre-wrap;">${parseMarkdown(education.Curriculum) || '등록된 커리큘럼이 없습니다.'}</div>
+                        <div style="padding: 1rem; background: #f8fafc; border-radius: 8px; color: #374151; line-height: 1.6; /*white-space: pre-wrap;*/">${parseMarkdown(education.Curriculum) || '등록된 커리큘럼이 없습니다.'}</div>
                     </div>
                     <div style="margin-bottom: 2rem;">
                         <h3 style="font-size: 1.125rem; font-weight: 600; color: #1f2937; margin-bottom: 0.75rem;">강사</h3>
@@ -1723,7 +1726,7 @@ async function openEducationModal(educationId) {
 
                     <div style="margin-bottom: 2rem;">
                         <h3 style="font-size: 1.125rem; font-weight: 600; color: #1f2937; margin-bottom: 0.75rem;">지원 대상 및 조건</h3>
-                        <div style="padding: 1rem; background: #fffefed; border-radius: 8px; color: #374151; line-height: 1.6; white-space: pre-wrap;">${parseMarkdown(education.Requirements) || '특별한 수강 요건이 없습니다.'}</div>
+                        <div style="padding: 1rem; background: #f8fafc; border-radius: 8px; color: #374151; line-height: 1.6; white-space: pre-wrap;">${parseMarkdown(education.Requirements) || '특별한 수강 요건이 없습니다.'}</div>
                     </div>
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
                         <div style="margin-bottom: 2rem;">
