@@ -29,10 +29,17 @@ function doGet(e) {
       const headers = data[0].map(h => h.toString().trim());
       const rows = data.slice(1);
       
-      // 이름(Index 1)과 이메일(Index 7)로 검색
+      // [수정] 헤더 이름을 기준으로 이름과 이메일 인덱스를 동적으로 찾음
+      const nameIdx = headers.indexOf("이름");
+      const emailIdx = headers.indexOf("이메일");
+
+      if (nameIdx === -1 || emailIdx === -1) {
+        return createJsonResponse({ error: 'Name or Email column not found in Applications sheet' });
+      }
+      
       const found = rows.filter(row => 
-        row[1].toString().trim() === name && 
-        row[7].toString().trim() === email
+        row[nameIdx].toString().trim() === name && 
+        row[emailIdx].toString().trim() === email
       ).map(row => {
         const obj = {};
         headers.forEach((header, i) => {

@@ -2,8 +2,8 @@
 
 // 설정 (기능 On/Off)
 const CONFIG = {
-    PUBLIC_API_URL: "https://script.google.com/macros/s/AKfycbyniHT6zhdPEu5t31SJtgWcinT3seUnNmdDkBj2-Z4F9XMKbYMLapEEnG54dgEZZgU/exec", // 01아카데미 계정 소유 시트로 변경
-    PRIVATE_API_URL: "https://script.google.com/macros/s/AKfycbzsNF4-B_62qg3pZOL77OjPvSMI__U68733eBiuqGd5k8ooN_eMUp2Ly1jPUvq6LQnvZQ/exec", // 01아카데미 계정 소유 시트로 변경
+    PUBLIC_API_URL: "https://script.google.com/macros/s/AKfycbw_KL_nFwXQ4wTRpBdhL_mOmnA07Y1LBFZEyenEwBGEYLlMHKjgGp2HGXEzDcxM_wQ/exec", // 01아카데미 계정 소유 시트로 변경
+    PRIVATE_API_URL: "https://script.google.com/macros/s/AKfycbydoy2lkHntENojE73livF7cfMthIM53bPj5yc3vNk2YT_4JGmCUE6pl4yIhGeQLtF_/exec", // 01아카데미 계정 소유 시트로 변경
     PUBLIC_SITE_URL: "https://sbsantcl.co.kr" // 공개 사이트 주소
 };
 
@@ -1443,6 +1443,8 @@ async function handleConfirmSubmit(event) {
     const name = document.getElementById('confirm-name').value.trim();
     const email = document.getElementById('confirm-email').value.trim();
     
+    console.log(`[Confirm] 조회 시도 - 이름: ${name}, 이메일: ${email}`);
+    
     if (!name || !email) {
         alert('이름과 이메일을 모두 입력해 주세요.');
         return;
@@ -1461,10 +1463,17 @@ async function handleConfirmSubmit(event) {
             </div>
         `;
         
-        const response = await fetch(`${API_URL}?type=CheckApplication&name=${encodeURIComponent(name)}&email=${encodeURIComponent(email)}`);
+        const fetchUrl = `${API_URL}?type=CheckApplication&name=${encodeURIComponent(name)}&email=${encodeURIComponent(email)}`;
+        console.log(`[Confirm] Fetch URL: ${fetchUrl}`);
+        
+        const response = await fetch(fetchUrl);
+        console.log(`[Confirm] Response Status: ${response.status}`);
+        
         const data = await response.json();
+        console.log(`[Confirm] 받은 데이터:`, data);
         
         if (data && data.length > 0) {
+            console.log(`[Confirm] ${data.length}건의 내역을 찾았습니다.`);
             let resultHtml = `
                 <div style="margin-bottom: 1.5rem;">
                     <h3 style="font-size: 1.125rem; font-weight: 600; color: #1f2937; margin-bottom: 1rem;">${name}님의 신청 내역 (${data.length}건)</h3>
