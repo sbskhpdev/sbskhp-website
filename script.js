@@ -506,16 +506,6 @@ function renderHomePage() {
                 <source src="./assets/image/home-bg.mp4" type="video/mp4">
             </video>
             <div class="content-card-1-1" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.5rem; margin-bottom: 3rem; position: relative; z-index: 1;">
-                <div style="padding: 1.5rem .5rem; border-radius: 8px; text-align: center; cursor: pointer;" class="hover-lift" onclick="updateURL('schedule');">
-                    <div style="width: 48px; height: 48px; margin: 0 auto 1rem; background-color: #4f46e5; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-                        <svg style="width: 24px; height: 24px; color: white;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                        </svg>
-                    </div>
-                    <h3 style="font-weight: 600; margin-bottom: 0.5rem;">교육일정</h3>
-                    <p class="service-description" style="color: #6b7280; font-size: 0.875rem;">최신 교육 일정을 확인하세요</p>
-                </div>
-                
                 <div style="padding: 1.5rem .5rem; border-radius: 8px; text-align: center; cursor: pointer;" class="hover-lift" onclick="updateURL('education');">
                     <div style="width: 48px; height: 48px; margin: 0 auto 1rem; background-color: #059669; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
                         <svg style="width: 24px; height: 24px; color: white;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -529,11 +519,21 @@ function renderHomePage() {
                 <div style="padding: 1.5rem .5rem; border-radius: 8px; text-align: center; cursor: pointer;" class="hover-lift" onclick="updateURL('apply');">
                     <div style="width: 48px; height: 48px; margin: 0 auto 1rem; background-color: #d97706; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
                         <svg style="width: 24px; height: 24px; color: white;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path    stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                         </svg>
                     </div>
                     <h3 style=" font-weight: 600; margin-bottom: 0.5rem;">교육신청</h3>
-                    <p class="service-description" style="color: #6b7280; font-size: 0.875rem;">온라인으로 간편하게 교육 신청 및 확인 가능</p>
+                    <p class="service-description" style="color: #6b7280; font-size: 0.875rem;">온라인으로 간편하게 교육 신청이 가능합니다</p>
+                </div>
+
+                <div style="padding: 1.5rem .5rem; border-radius: 8px; text-align: center; cursor: pointer;" class="hover-lift" onclick="updateURL('confirm');">
+                    <div style="width: 48px; height: 48px; margin: 0 auto 1rem; background-color: #4f46e5; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                        <svg style="width: 24px; height: 24px; color: white;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                        </svg>
+                    </div>
+                    <h3 style="font-weight: 600; margin-bottom: 0.5rem;">신청확인</h3>
+                    <p class="service-description" style="color: #6b7280; font-size: 0.875rem;">본인의 교육 신청 내역을 확인해 보세요</p>
                 </div>
             </div>
             <!-- 히어로 섹션 -->
