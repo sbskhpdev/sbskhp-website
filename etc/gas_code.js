@@ -121,21 +121,34 @@ function doPost(e) {
     // [취소 처리 로직]
     if (type === 'Cancel') {
       const allData = sheet.getDataRange().getValues();
+      const headers = allData[0]; // 헤더 행
       let foundRowIndex = -1;
 
       const searchName = (data.name || "").trim();
       const searchEmail = (data.email || "").trim();
       const searchCourse = (data.course || "").trim();
 
-      // [수정] 가장 최근(마지막 행) 데이터부터 거꾸로 찾고, 상태가 '대기' 또는 '승인'인 경우만 취소 처리
+      // 헤더를 기반으로 필요한 열 인덱스 찾기 (유연하게 대응)
+      const nameIdx = headers.indexOf("이름");
+      const emailIdx = headers.indexOf("이메일");
+      const courseIdx = headers.indexOf("신청과정");
+      const statusIdx = headers.indexOf("처리상태");
+      const cancelReasonIdx = headers.indexOf("취소사유");
+
+      if (nameIdx === -1 || emailIdx === -1 || courseIdx === -1 || statusIdx === -1) {
+        return createJsonResponse({ success: false, error: "시트 구조에 문제가 있습니다. 관리자에게 문의하세요." });
+      }
+
+      // 가장 최근(마지막 행) 데이터부터 거꾸로 찾고, 취소 가능 상태들만 처리
       for (let i = allData.length - 1; i >= 1; i--) {
-        const rowName = allData[i][1].toString().trim();
-        const rowEmail = allData[i][7].toString().trim();
-        const rowCourse = allData[i][3].toString().trim();
-        const rowStatus = allData[i][6].toString().trim(); // 처리상태 (7번째 열)
+        const rowName = allData[i][nameIdx].toString().trim();
+        const rowEmail = allData[i][emailIdx].toString().trim();
+        const rowCourse = allData[i][courseIdx].toString().trim();
+        const rowStatus = allData[i][statusIdx].toString().trim();
 
         if (rowName === searchName && rowEmail === searchEmail && rowCourse === searchCourse) {
-          if (rowStatus === '대기' || rowStatus === '승인') {
+          // 취소 가능한 상태면 찾음 (승인 대기 추가)
+          if (rowStatus === '대기' || rowStatus === '승인' || rowStatus === '승인 대기') {
             foundRowIndex = i + 1; // 1-based index
             break;
           }
@@ -143,8 +156,11 @@ function doPost(e) {
       }
 
       if (foundRowIndex > 0) {
-        sheet.getRange(foundRowIndex, 7).setValue('취소'); // 처리상태 (7번째 열)
-        sheet.getRange(foundRowIndex, 14).setValue(data.cancelReason || '사용자 요청 취소'); // 취소사유 (14번째 열)
+        // 처리상태와 취소사유를 해당 열에 정확히 기록
+        sheet.getRange(foundRowIndex, statusIdx + 1).setValue('취소');
+        if (cancelReasonIdx !== -1) {
+          sheet.getRange(foundRowIndex, cancelReasonIdx + 1).setValue(data.cancelReason || '사용자 요청 취소');
+        }
         
         // [추가] 취소 안내 이메일 발송
         sendApplicationEmail({

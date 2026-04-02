@@ -2,8 +2,8 @@
 
 // 설정 (기능 On/Off)
 const CONFIG = {
-    PUBLIC_API_URL: "https://script.google.com/macros/s/AKfycbw_KL_nFwXQ4wTRpBdhL_mOmnA07Y1LBFZEyenEwBGEYLlMHKjgGp2HGXEzDcxM_wQ/exec", // 01아카데미 계정 소유 시트로 변경
-    PRIVATE_API_URL: "https://script.google.com/macros/s/AKfycbydoy2lkHntENojE73livF7cfMthIM53bPj5yc3vNk2YT_4JGmCUE6pl4yIhGeQLtF_/exec", // 01아카데미 계정 소유 시트로 변경
+    PUBLIC_API_URL: "https://script.google.com/macros/s/AKfycbxIein_v99fkoa_S6h8lH2RQ2umXIHz-Psd63G1Er9IpVQGiBOEIrG1jkb2iGirlv0/exec", // 01아카데미 계정 소유 시트로 변경
+    PRIVATE_API_URL: "https://script.google.com/macros/s/AKfycbzvXRLyCT0UxDkWITpLTinxQmPpUPv9fspb_iE1U5HLUIeFYr26SdQHMNlGEySytwOJXA/exec", // 01아카데미 계정 소유 시트로 변경
     PUBLIC_SITE_URL: "https://sbsantcl.co.kr" // 공개 사이트 주소
 };
 
@@ -1501,7 +1501,7 @@ async function handleConfirmSubmit(event) {
                 startDate.setHours(0, 0, 0, 0);
                 
                 const isBeforeStart = startDate > today;
-                const showCancelBtn = (status === '대기' || status === '승인') && isBeforeStart;
+                const showCancelBtn = (status === '대기' || status === '승인' || status === '승인 대기') && isBeforeStart;
                 
                 resultHtml += `
                     <div style="background-color: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 1.25rem; margin-bottom: 1rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
