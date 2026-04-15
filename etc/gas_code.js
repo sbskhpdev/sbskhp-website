@@ -298,6 +298,43 @@ function doPost(e) {
     // '처리변환일시'는 초기값이므로 건너뜀
 
     sheet.appendRow(newRow);
+
+    // --- 2. 신청 후 정원이 꽉 찼는지 다시 확인하여 자동 모집마감 처리 ---
+    const finalEduSheet = getSheetCaseInsensitive(ss, 'Education');
+    if (finalEduSheet) {
+      const finalEduData = finalEduSheet.getDataRange().getValues();
+      const finalHeaders = finalEduData[0];
+      const fTitleIdx = finalHeaders.indexOf("Title");
+      const fRoundIdx = finalHeaders.indexOf("회차");
+      const fLimitIdx = finalHeaders.indexOf("정원");
+      const fStatusIdx = finalHeaders.indexOf("Status");
+
+      const rMatch = applyFullCourse.match(/\((.*?)회차\)/);
+      const rNum = rMatch ? rMatch[1] : "";
+
+      const fRowIdx = finalEduData.findIndex((r, idx) => {
+        if (idx === 0) return false;
+        return String(r[fTitleIdx]).trim() === applyCourseBase && 
+               String(r[fRoundIdx]).trim().replace(/[^0-9]/g, '') === rNum;
+      });
+
+      if (fRowIdx !== -1) {
+        const fLimit = parseInt(finalEduData[fRowIdx][fLimitIdx]) || 999;
+        
+        // [수정] 헤더 인덱스를 동적으로 사용하여 현재 신청 인원 카운트
+        const fCount = sheet.getDataRange().getValues().filter((row, idx) => {
+          if (idx === 0) return false;
+          const rCourse = String(row[idxAppCourse]).trim();
+          const rStatus = String(row[idxAppStatus]).trim();
+          return rCourse === applyFullCourse && (rStatus === '대기' || rStatus === '승인');
+        }).length;
+
+        if (fCount >= fLimit && fStatusIdx !== -1) {
+          finalEduSheet.getRange(fRowIdx + 1, fStatusIdx + 1).setValue('모집마감');
+        }
+      }
+    }
+    // ------------------------------------------------------------
     
     // [추가] 신청 완료 안내 이메일 발송
     sendApplicationEmail({

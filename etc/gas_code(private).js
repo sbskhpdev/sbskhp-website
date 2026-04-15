@@ -307,10 +307,13 @@ function doPost(e) {
 
       if (fRowIdx !== -1) {
         const fLimit = parseInt(finalEduData[fRowIdx][fLimitIdx]) || 999;
+        
+        // [수정] 헤더 인덱스를 동적으로 사용하여 현재 신청 인원 카운트
         const fCount = sheet.getDataRange().getValues().filter((row, idx) => {
           if (idx === 0) return false;
-          return String(row[3]).trim() === applyFullCourse && 
-                 (String(row[6]).trim() === '대기' || String(row[6]).trim() === '승인');
+          const rCourse = String(row[idxAppCourse]).trim();
+          const rStatus = String(row[idxAppStatus]).trim();
+          return rCourse === applyFullCourse && (rStatus === '대기' || rStatus === '승인');
         }).length;
 
         if (fCount >= fLimit && fStatusIdx !== -1) {
