@@ -179,6 +179,12 @@ function doPost(e) {
 
     // [신청 처리 로직]
     const existingData = sheet.getDataRange().getValues();
+    const appHeaders = existingData[0].map(h => h.toString().trim());
+    const idxAppName = appHeaders.indexOf("이름");
+    const idxAppEmail = appHeaders.indexOf("이메일");
+    const idxAppCourse = appHeaders.indexOf("신청과정");
+    const idxAppStatus = appHeaders.indexOf("처리상태");
+
     const applyName = (data.name || "").trim();
     const applyEmail = (data.email || "").trim();
     const applyFullCourse = (data.course || "").trim(); // 예: "AI영상제작 기초 (2회차)"
@@ -212,9 +218,9 @@ function doPost(e) {
         
         // 현재 해당 과정을 신청한 인원 카운트 (상태가 '취소', '반려'가 아닌 것)
         const currentCount = existingData.filter((row, idx) => {
-          if (idx === 0) return false;
-          const rCourse = String(row[3]).trim();
-          const rStatus = String(row[6]).trim();
+          if (idx === 0 || idxAppCourse === -1 || idxAppStatus === -1) return false;
+          const rCourse = String(row[idxAppCourse]).trim();
+          const rStatus = String(row[idxAppStatus]).trim();
           return rCourse === applyFullCourse && rStatus !== '취소' && rStatus !== '반려';
         }).length;
 
@@ -233,11 +239,13 @@ function doPost(e) {
     // ----------------------------------------
 
     let duplicatedRound = "";
-    const isDuplicate = existingData.some(row => {
-      const rowName = row[1].toString().trim();
-      const rowEmail = row[7].toString().trim();
-      const rowFullCourse = row[3].toString().trim(); // 예: "AI영상제작 기초 (1회차)"
-      const rowStatus = row[6].toString().trim(); // 처리상태 (Index 6)
+    const isDuplicate = existingData.some((row, idx) => {
+      if (idx === 0 || idxAppName === -1 || idxAppEmail === -1 || idxAppCourse === -1 || idxAppStatus === -1) return false;
+      
+      const rowName = row[idxAppName].toString().trim();
+      const rowEmail = row[idxAppEmail].toString().trim();
+      const rowFullCourse = row[idxAppCourse].toString().trim(); // 예: "AI영상제작 기초 (1회차)"
+      const rowStatus = row[idxAppStatus].toString().trim(); 
       const rowCourseBase = rowFullCourse.split(' (')[0].trim();
 
       // 이름, 이메일, 과정명이 일치하고 상태가 '취소'나 '반려'가 아닌 경우만 중복으로 간주
@@ -302,13 +310,13 @@ function doPost(e) {
     return createJsonResponse({ success: true, message: "신청이 성공적으로 접수되었습니다." });
   } catch (err) {
     return createJsonResponse({ error: err.toString() });
-  }
-}
-
-/** finally {
+  } finally {
     // 2. 잠금 해제 (반드시 실행)
     lock.releaseLock();
   }
+}
+
+/**
  * [추가] 이메일 발송 통합 함수
  */
 function sendApplicationEmail(info) {
