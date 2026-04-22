@@ -1,9 +1,9 @@
 // SBSKHP 교육 서비스 플랫폼 - 메인 JavaScript 파일
 
 // 설정 (기능 On/Off)
-const CONFIG = {
-    PUBLIC_API_URL: "https://script.google.com/macros/s/AKfycbwY1EYCgHxwsG7Q8whgKxt3FiIuzYkVy7eT8WpXi4UbzwISmHzaKFCzbexNd5piolM/exec", // 01아카데미 계정 소유 시트로 변경
-    PRIVATE_API_URL: "https://script.google.com/macros/s/AKfycbwMl88wegEkw5R0g8PSeqDUOAuiW20GKPvG_nAKXvWrKRQ5xo9ONFMA2nc6HprpF7roVw/exec", // 01아카데미 계정 소유 시트로 변경
+const CONFIG = {//시트 소유 계정 01@sbsantacademy.co.kr
+    PUBLIC_API_URL: "https://script.google.com/macros/s/AKfycbz6_gFbJXIp3kQL7s9biKVaxEP-Qtsi-dUUvU81cPCrG3xZLoe9gebJ6sMUXJEngFk/exec",
+    PRIVATE_API_URL: "https://script.google.com/macros/s/AKfycbwLSRG6YtUWyHiDFrzz2kKmVRTGFkBcagVDR2UTCbRCPJw-MZ2ZKWFx-SPjNAp3PZNssQ/exec",
     PUBLIC_SITE_URL: "https://sbsantcl.co.kr" // 공개 사이트 주소
 };
 
@@ -1400,7 +1400,7 @@ async function handleApplySubmit(event) {
         const result = await response.json();
         
         if (result.success) {
-            alert(`신청이 완료되었습니다!\n\n과정: ${formData.course}\n신청자: ${formData.name}\n`);
+            alert(`신청이 완료되었습니다!\n\n과정: ${formData.course}\n신청자: ${formData.name}\n\n신청 내역은 '신청 확인' 메뉴에서 언제든지 확인하실 수 있습니다.`);
             
             // 폼 초기화
             document.getElementById('apply-form').reset();

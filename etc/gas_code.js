@@ -336,14 +336,6 @@ function doPost(e) {
     }
     // ------------------------------------------------------------
     
-    // [추가] 신청 완료 안내 이메일 발송
-    sendApplicationEmail({
-      name: data.name,
-      email: data.email,
-      course: data.course,
-      status: '대기'
-    });
-
     return createJsonResponse({ success: true, message: "신청이 성공적으로 접수되었습니다." });
   } catch (err) {
     return createJsonResponse({ error: err.toString() });
