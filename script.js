@@ -985,12 +985,12 @@ async function renderApplyPage() {
             
             <!-- 신청 폼 유형 선택 -->
             <div style="display: flex; gap: 0.5rem; margin-bottom: 2rem; border-bottom: 1px solid #e5e7eb; padding-bottom: 1rem;">
-            <button type="button" class="form-type-btn active" data-type="sbs" style="padding: 10px 20px; border-radius: 8px; border: 1px solid #3b82f6; background: #3b82f6; color: white; cursor: pointer; font-weight: 600; transition: all 0.2s;">SBS 계열사 직원 신청</button>
-            <button type="button" class="form-type-btn" data-type="general" style="padding: 10px 20px; border-radius: 8px; border: 1px solid #e5e7eb; background: white; color: #374151; cursor: pointer; font-weight: 600; transition: all 0.2s;">일반 신청</button>
+            <button type="button" class="form-type-btn active" data-type="general" style="padding: 10px 20px; border-radius: 8px; border: 1px solid #3b82f6; background: #3b82f6; color: white; cursor: pointer; font-weight: 600; transition: all 0.2s;">일반 신청</button>
+            <button type="button" class="form-type-btn" data-type="sbs" style="padding: 10px 20px; border-radius: 8px; border: 1px solid #e5e7eb; background: white; color: #374151; cursor: pointer; font-weight: 600; transition: all 0.2s;">SBS 계열사 직원 신청</button>
             </div>
 
             <form id="apply-form" style="max-width: 600px;">
-                <input type="hidden" id="apply-form-type" value="sbs">
+                <input type="hidden" id="apply-form-type" value="general">
                 
                 <div style="margin-bottom: 1.5rem;">
                     <label class="form-label">이름 *</label>
